@@ -14,6 +14,7 @@ if (!SEPOLIA_PRIVATE_KEY) {
   throw new Error("Missing SEPOLIA_PRIVATE_KEY environment variable");
 }
 
+/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
     version: "0.8.20",
