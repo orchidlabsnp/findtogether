@@ -95,10 +95,12 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/cases/search", async (req, res) => {
-    const { query, searchType } = req.query;
+  app.post("/api/cases/search", upload.array("files"), async (req, res) => {
+    const { searchType } = req.body;
+    const files = req.files as Express.Multer.File[];
+    const query = req.body.query;
     
-    if (!query && !req.files) {
+    if (!query && !files?.length && searchType !== "image") {
       return res.status(400).send("Search query or image is required");
     }
 
@@ -133,47 +135,52 @@ export function registerRoutes(app: Express): Server {
           break;
 
         case 'image':
-          if (!req.files || !Array.isArray(req.files)) {
+          if (!files || !files.length) {
             return res.status(400).send("Image file is required for image search");
           }
           
-          const imageFile = req.files[0];
-          const imageAnalysis = await getImageDescription(imageFile.buffer);
+          try {
+            const imageFile = files[0];
+            const imageAnalysis = await getImageDescription(imageFile.buffer);
           
-          // Get all cases
-          const allCases = await db.query.cases.findMany({
-            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-          });
+            // Get all cases
+            const allCases = await db.query.cases.findMany({
+              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+            });
           
-          // Compare image with each case
-          const casesWithScores = await Promise.all(
-            allCases.map(async (case_) => {
-              if (!case_.imageUrl) return { ...case_, similarity: 0, matchedFeatures: [] };
-              
-              const characteristics = case_.aiCharacteristics ? 
-                JSON.parse(case_.aiCharacteristics) : undefined;
-              
-              const { similarity, matchedFeatures } = await compareImageWithDescription(
-                imageFile.buffer,
-                case_.description,
-                characteristics
-              );
-              
-              return { 
-                ...case_,
-                similarity,
-                matchedFeatures,
-                aiAnalysis: imageAnalysis.characteristics 
-              };
-            })
-          );
+            // Compare image with each case
+            const casesWithScores = await Promise.all(
+              allCases.map(async (case_) => {
+                if (!case_.imageUrl) return { ...case_, similarity: 0, matchedFeatures: [] };
+                
+                const characteristics = case_.aiCharacteristics ? 
+                  JSON.parse(case_.aiCharacteristics) : undefined;
+                
+                const { similarity, matchedFeatures } = await compareImageWithDescription(
+                  imageFile.buffer,
+                  case_.description,
+                  characteristics
+                );
+                
+                return { 
+                  ...case_,
+                  similarity,
+                  matchedFeatures,
+                  aiAnalysis: imageAnalysis.characteristics 
+                };
+              })
+            );
           
-          // Filter and sort by similarity score
-          searchResults = casesWithScores
-            .filter(case_ => case_.similarity > 0.6) // threshold for similarity
-            .sort((a, b) => b.similarity - a.similarity);
+            // Filter and sort by similarity score
+            searchResults = casesWithScores
+              .filter(case_ => case_.similarity > 0.6) // threshold for similarity
+              .sort((a, b) => b.similarity - a.similarity);
+          } catch (error) {
+            console.error('Error processing image search:', error);
+            return res.status(500).send("Error processing image search");
+          }
           break;
-        
+
         default:
           // Combined search
           searchResults = await db.query.cases.findMany({
