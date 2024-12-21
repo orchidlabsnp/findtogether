@@ -1,11 +1,10 @@
 import Web3 from 'web3';
-import { Contract } from 'web3-eth-contract';
-import { AbiItem } from 'web3-utils';
+import type { Contract, ContractAbi } from 'web3';
 
 // Initialize web3 and contract instances
 let web3: Web3;
-let contract: Contract;
-let account: any;
+let contract: Contract<ContractAbi>;
+let account: { address: string };
 
 // Contract ABI
 const ChildProtectionReports = {
@@ -294,20 +293,40 @@ if (!privateKey.startsWith('0x')) {
 }
 
 try {
-  web3 = new Web3(`https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`);
+  // Initialize Web3 with HTTP provider
+  web3 = new Web3(
+    new Web3.providers.HttpProvider(
+      `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      {
+        timeout: 30000, // 30 seconds timeout
+      }
+    )
+  );
+
+  // Add account to wallet with proper typing
   account = web3.eth.accounts.privateKeyToAccount(privateKey);
   web3.eth.accounts.wallet.add(account);
 
-  // Initialize contract
+  // Initialize contract with type safety
   const CONTRACT_ADDRESS = "0xE7facc9f57fc0DD54f3Ef1A422345835edeFE0f2";
   contract = new web3.eth.Contract(
-    ChildProtectionReports.abi as AbiItem[],
+    ChildProtectionReports.abi as ContractAbi,
     CONTRACT_ADDRESS
   );
 
+  // Verify contract connection
+  console.log('Verifying contract connection...');
+  const reportCount = await contract.methods.getReportCount().call();
+  console.log('Contract connection verified. Current report count:', reportCount);
   console.log('Blockchain service initialized successfully');
 } catch (error) {
   console.error('Error initializing blockchain service:', error);
+  if (error instanceof Error) {
+    console.error('Details:', {
+      message: error.message,
+      stack: error.stack
+    });
+  }
   throw new Error('Failed to initialize blockchain connection. Please check your configuration.');
 }
 
