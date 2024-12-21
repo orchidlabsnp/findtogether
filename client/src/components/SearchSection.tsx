@@ -12,7 +12,7 @@ import {
 import { Card } from "@/components/ui/card";
 
 interface SearchSectionProps {
-  onSearch: (query: string, searchType: string) => void;
+  onSearch: (query: string, searchType: string, imageResults?: any[]) => void;
 }
 
 export default function SearchSection({ onSearch }: SearchSectionProps) {
@@ -24,12 +24,12 @@ export default function SearchSection({ onSearch }: SearchSectionProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (searchType === "image" && selectedImage) {
-      const formData = new FormData();
-      formData.append("files", selectedImage);
-      formData.append("searchType", "image");
-      
-      try {
+    try {
+      if (searchType === "image" && selectedImage) {
+        const formData = new FormData();
+        formData.append("files", selectedImage);
+        formData.append("searchType", "image");
+        
         const response = await fetch(`/api/cases/search`, {
           method: "POST",
           body: formData,
@@ -40,16 +40,15 @@ export default function SearchSection({ onSearch }: SearchSectionProps) {
         }
         
         const results = await response.json();
-        onSearch("", searchType, results);
-      } catch (error) {
-        console.error("Error performing image search:", error);
-        // Re-throw to show error in UI
-        throw error;
+        onSearch("", "image", results);
+      } else if (searchType.startsWith('child_')) {
+        onSearch(searchType, 'case_type');
+      } else {
+        onSearch(query, searchType);
       }
-    } else if (searchType.startsWith('child_')) {
-      onSearch(searchType, 'case_type');
-    } else {
-      onSearch(query, searchType);
+    } catch (error) {
+      console.error("Error performing search:", error);
+      throw error;
     }
   };
 

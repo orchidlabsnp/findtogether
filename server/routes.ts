@@ -143,39 +143,56 @@ export function registerRoutes(app: Express): Server {
           try {
             const imageFile = files[0];
             const imageAnalysis = await getImageDescription(imageFile.buffer);
+            console.log('Image analysis:', imageAnalysis);
           
             // Get all cases
             const allCases = await db.query.cases.findMany({
               orderBy: (cases, { desc }) => [desc(cases.createdAt)]
             });
+            
+            console.log('Found cases:', allCases.length);
           
             // Compare image with each case
             const casesWithScores = await Promise.all(
               allCases.map(async (case_) => {
-                if (!case_.imageUrl) return { ...case_, similarity: 0, matchedFeatures: [] };
-                
-                const characteristics = case_.aiCharacteristics ? 
-                  JSON.parse(case_.aiCharacteristics) : undefined;
-                
-                const { similarity, matchedFeatures } = await compareImageWithDescription(
-                  imageFile.buffer,
-                  case_.description,
-                  characteristics
-                );
-                
-                return { 
-                  ...case_,
-                  similarity,
-                  matchedFeatures,
-                  aiAnalysis: imageAnalysis.characteristics 
-                };
+                try {
+                  if (!case_.imageUrl) {
+                    console.log(`Case ${case_.id} has no image`);
+                    return { ...case_, similarity: 0, matchedFeatures: [] };
+                  }
+                  
+                  const characteristics = case_.aiCharacteristics ? 
+                    JSON.parse(case_.aiCharacteristics) : undefined;
+                  
+                  console.log(`Comparing case ${case_.id} with characteristics:`, characteristics);
+                  
+                  const { similarity, matchedFeatures } = await compareImageWithDescription(
+                    imageFile.buffer,
+                    case_.description,
+                    characteristics
+                  );
+                  
+                  console.log(`Case ${case_.id} similarity:`, similarity);
+                  
+                  return { 
+                    ...case_,
+                    similarity,
+                    matchedFeatures,
+                    aiAnalysis: imageAnalysis.characteristics 
+                  };
+                } catch (error) {
+                  console.error(`Error processing case ${case_.id}:`, error);
+                  return { ...case_, similarity: 0, matchedFeatures: [] };
+                }
               })
             );
           
             // Filter and sort by similarity score
             searchResults = casesWithScores
-              .filter(case_ => case_.similarity > 0.6) // threshold for similarity
+              .filter(case_ => case_.similarity > 0.5) // lowered threshold for better results
               .sort((a, b) => b.similarity - a.similarity);
+            
+            console.log('Search results:', searchResults.length);
           } catch (error) {
             console.error('Error processing image search:', error);
             return res.status(500).send("Error processing image search");
