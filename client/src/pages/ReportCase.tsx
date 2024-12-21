@@ -25,6 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const reportCaseSchema = z.object({
   childName: z.string().min(1, "Child's name is required"),
@@ -108,7 +110,24 @@ export default function ReportCase() {
   return (
     <div className="container mx-auto px-6 py-12">
       {showProfileCard && (
-        <Card className="max-w-2xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className="max-w-2xl mx-auto relative">
+            {isPending && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center"
+              >
+                <div className="flex flex-col items-center gap-4 p-4 rounded-lg">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm font-medium">Processing your report...</p>
+                </div>
+              </motion.div>
+            )}
           <CardHeader>
             <CardTitle>Report Missing Child Case</CardTitle>
           </CardHeader>
@@ -231,13 +250,38 @@ export default function ReportCase() {
                   </p>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isPending}>
-                  {isPending ? "Submitting..." : "Submit Report"}
+                <Button 
+                  type="submit" 
+                  className="w-full relative" 
+                  disabled={isPending}
+                >
+                  <AnimatePresence mode="wait">
+                    {isPending ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Processing...
+                      </motion.div>
+                    ) : (
+                      <motion.span
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        Submit Report
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </Button>
               </form>
             </Form>
           </CardContent>
         </Card>
+        </motion.div>
       )}
     </div>
   );

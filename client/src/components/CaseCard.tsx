@@ -2,8 +2,9 @@ import type { Case } from "@db/schema";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-import { MapPin, Calendar, Phone, Mail, Info, Heart, HelpCircle, Link } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MapPin, Calendar, Phone, Mail, Info, Heart, HelpCircle, Link, Loader2 } from "lucide-react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -105,15 +106,39 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1">
-              <Phone className="h-4 w-4 mr-2" />
-              Contact
+            <Button 
+              variant="outline" 
+              className="flex-1 relative" 
+              onClick={() => {
+                // Contact functionality would go here
+              }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  className="flex items-center justify-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Contact
+                </motion.div>
+              </AnimatePresence>
             </Button>
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="flex-1">
-                  <Heart className="h-4 w-4 mr-2" />
-                  Save Child
+                <Button className="flex-1 relative">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      className="flex items-center justify-center"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <Heart className="h-4 w-4 mr-2" />
+                      Save Child
+                    </motion.div>
+                  </AnimatePresence>
                 </Button>
               </DialogTrigger>
               <DialogContent>
