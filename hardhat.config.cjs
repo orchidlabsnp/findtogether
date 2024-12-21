@@ -1,9 +1,6 @@
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
-import "@nomiclabs/hardhat-ethers";
-import dotenv from "dotenv";
-
-dotenv.config();
+require("@nomicfoundation/hardhat-toolbox");
+require("@nomiclabs/hardhat-ethers");
+require("dotenv").config();
 
 // Load environment variables
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY;
@@ -17,7 +14,7 @@ if (!SEPOLIA_PRIVATE_KEY) {
   throw new Error("Missing SEPOLIA_PRIVATE_KEY environment variable");
 }
 
-const config: HardhatUserConfig = {
+module.exports = {
   solidity: {
     version: "0.8.20",
     settings: {
@@ -44,5 +41,3 @@ const config: HardhatUserConfig = {
     artifacts: "./artifacts"
   }
 };
-
-export default config;
