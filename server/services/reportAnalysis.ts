@@ -83,6 +83,7 @@ const emergencyContacts: EmergencyContact[] = [
     description: '24/7 crisis support via text message'
   }
 ];
+
 interface RiskAssessment {
   level: 'EXTREME' | 'HIGH' | 'MEDIUM' | 'LOW';
   severity: string;
@@ -154,7 +155,6 @@ function calculateRiskLevel(case_: Case, aiAnalysis: any | null): RiskAssessment
 
   return baseRisk;
 }
-
 
 export async function analyzeAndNotify(case_: Case) {
   const notificationService = getNotificationService();

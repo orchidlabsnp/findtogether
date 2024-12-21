@@ -18,6 +18,7 @@ export const cases = pgTable("cases", {
   contactInfo: text("contact_info").notNull(),
   caseType: text("case_type"),
   imageUrl: text("image_url"),
+  ipfsHash: text("ipfs_hash"),
   reporterId: integer("reporter_id").references(() => users.id),
   status: text("status").default("open"),
   aiCharacteristics: text("ai_characteristics"),

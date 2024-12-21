@@ -9,6 +9,8 @@ import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { initializeNotificationService } from "./services/notifications";
 import { analyzeAndNotify } from "./services/reportAnalysis";
+import { uploadToIPFS } from "./services/ipfs";
+import { createBlockchainReport } from "./services/blockchain";
 
 const storage = multer.diskStorage({
   destination: "./uploads",
@@ -83,6 +85,19 @@ export function registerRoutes(app: Express): Server {
         }
       }
 
+      // Upload image to IPFS if available
+      let ipfsHash;
+      if (imageFile) {
+        try {
+          ipfsHash = await uploadToIPFS(imageFile.buffer);
+          console.log('Image uploaded to IPFS:', ipfsHash);
+        } catch (ipfsError) {
+          console.error('IPFS upload error:', ipfsError);
+          // Continue without IPFS if upload fails
+        }
+      }
+
+      // Create case in PostgreSQL with status 'pending'
       const [newCase] = await db.insert(cases).values({
         childName,
         age: parseInt(age),
@@ -92,25 +107,80 @@ export function registerRoutes(app: Express): Server {
         caseType,
         imageUrl,
         aiCharacteristics,
-        status: 'open'
+        status: 'pending',
+        ipfsHash
       }).returning();
 
-      // Analyze the case and send notifications if necessary
-      try {
-        const analysisResult = await analyzeAndNotify(newCase);
-        res.json({
-          case: newCase,
-          analysis: analysisResult
-        });
-      } catch (notificationError) {
-        console.error("Error in notification system:", notificationError);
-        // Still return success since the case was created
-        res.json({
-          case: newCase,
-          analysis: {
-            status: 'created',
-            message: 'Case created successfully, but notification system encountered an error'
+      // For critical cases (child labor or harassment), trigger immediate response
+      const isCriticalCase = caseType === 'child_labour' || caseType === 'child_harassment';
+      
+      if (isCriticalCase) {
+        console.log(`Critical case detected: ${caseType}. Initiating emergency protocols...`);
+        
+        // Upload to IPFS if image exists
+        if (imageFile) {
+          try {
+            const ipfsHash = await uploadToIPFS(imageFile.buffer);
+            console.log('Image uploaded to IPFS:', ipfsHash);
+            // Update the case with IPFS hash
+            await db
+              .update(cases)
+              .set({ ipfsHash })
+              .where(eq(cases.id, newCase.id));
+          } catch (ipfsError) {
+            console.error('IPFS upload error:', ipfsError);
+            // Continue without IPFS if upload fails
           }
+        }
+
+        // Store in blockchain
+        try {
+          const blockchainReportId = await createBlockchainReport(
+            caseType,
+            childName,
+            parseInt(age),
+            location,
+            description,
+            contactInfo,
+            ipfsHash || '',
+            aiCharacteristics || ''
+          );
+          console.log('Case stored in blockchain with ID:', blockchainReportId);
+          
+          // Update case status to active after blockchain storage
+          await db
+            .update(cases)
+            .set({ status: 'active' })
+            .where(eq(cases.id, newCase.id));
+        } catch (blockchainError) {
+          console.error('Blockchain storage error:', blockchainError);
+          // Continue without blockchain if storage fails
+        }
+
+        // Analyze case and trigger emergency notifications
+        try {
+          const analysisResult = await analyzeAndNotify(newCase);
+          console.log('Emergency protocols activated:', analysisResult);
+          
+          res.json({
+            case: newCase,
+            analysis: analysisResult,
+            message: 'CRITICAL CASE: Emergency services notified.'
+          });
+        } catch (notificationError) {
+          console.error("Error in notification system:", notificationError);
+          res.status(500).json({
+            case: newCase,
+            error: 'Emergency notification system failure',
+            message: 'Case created but failed to notify emergency services'
+          });
+        }
+      } else {
+        // For non-critical cases, just store and return
+        console.log('Non-critical case processed successfully');
+        res.json({
+          case: newCase,
+          message: 'Case created successfully'
         });
       }
     } catch (error) {
