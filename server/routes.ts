@@ -102,11 +102,18 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/cases/search", upload.array("files"), async (req, res) => {
+    console.log('Search request received:', {
+      searchType: req.body.searchType,
+      hasFiles: req?.files?.length > 0,
+      query: req.body.query
+    });
+    
     const { searchType } = req.body;
     const files = req.files as Express.Multer.File[];
     const query = req.body.query;
     
     if (!query && !files?.length && searchType !== "image") {
+      console.log('Invalid search request: missing query or files');
       return res.status(400).send("Search query or image is required");
     }
 
@@ -141,17 +148,30 @@ export function registerRoutes(app: Express): Server {
           break;
 
         case 'image':
+          console.log('Processing image search...');
           if (!files || !files.length) {
+            console.log('No image file provided');
             return res.status(400).send("Image file is required for image search");
           }
           
           try {
             const imageFile = files[0];
+            console.log('Processing image:', imageFile.originalname);
+            
+            // Ensure uploads directory exists
+            if (!fs.existsSync('./uploads')) {
+              console.log('Creating uploads directory');
+              fs.mkdirSync('./uploads', { recursive: true });
+            }
             
             // Save image to disk first
             const filename = `${Date.now()}-${imageFile.originalname}`;
-            await fs.promises.writeFile(`./uploads/${filename}`, imageFile.buffer);
+            const filepath = `./uploads/${filename}`;
+            console.log('Saving image to:', filepath);
+            
+            await fs.promises.writeFile(filepath, imageFile.buffer);
             const imageUrl = `/uploads/${filename}`;
+            console.log('Image saved successfully at:', imageUrl);
             
             console.log('Processing image analysis...');
             const imageAnalysis = await getImageDescription(imageFile.buffer);

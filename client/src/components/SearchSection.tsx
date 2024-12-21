@@ -28,9 +28,12 @@ export default function SearchSection({ onSearch }: SearchSectionProps) {
       if (searchType === "image" && selectedImage) {
         console.log('Starting image search with file:', selectedImage.name);
         
+        // Create form data
         const formData = new FormData();
         formData.append("files", selectedImage);
         formData.append("searchType", "image");
+        
+        console.log('Sending image search request...');
         
         const response = await fetch(`/api/cases/search`, {
           method: "POST",
