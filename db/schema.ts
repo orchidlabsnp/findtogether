@@ -19,6 +19,8 @@ export const cases = pgTable("cases", {
   imageUrl: text("image_url"),
   reporterId: integer("reporter_id").references(() => users.id),
   status: text("status").default("open"),
+  aiCharacteristics: text("ai_characteristics"),
+  matchConfidence: text("match_confidence"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });

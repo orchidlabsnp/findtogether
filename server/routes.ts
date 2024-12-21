@@ -30,6 +30,7 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
+
   app.get("/api/cases", async (req, res) => {
     const allCases = await db.query.cases.findMany({
       orderBy: (cases, { desc }) => [desc(cases.createdAt)]
@@ -49,18 +50,29 @@ export function registerRoutes(app: Express): Server {
       // Get the first image file to use as the main image
       const imageFile = files?.find(file => file.mimetype.startsWith('image/'));
       const imageUrl = imageFile ? `/uploads/${imageFile.filename}` : undefined;
+      
+      let aiCharacteristics = undefined;
+      if (imageFile) {
+        try {
+          const analysis = await getImageDescription(imageFile.buffer);
+          aiCharacteristics = JSON.stringify(analysis.characteristics);
+        } catch (error) {
+          console.error("Error analyzing image:", error);
+        }
+      }
 
-      const newCase = await db.insert(cases).values({
+      const [newCase] = await db.insert(cases).values({
         childName,
         age: parseInt(age),
         location,
         description,
         contactInfo,
         imageUrl,
+        aiCharacteristics,
         status: 'open'
       }).returning();
 
-      res.json(newCase[0]);
+      res.json(newCase);
     } catch (error) {
       console.error("Error creating case:", error);
       res.status(500).send("Failed to create case");
@@ -102,7 +114,7 @@ export function registerRoutes(app: Express): Server {
           }
           
           const imageFile = req.files[0];
-          const imageDescription = await getImageDescription(imageFile.buffer);
+          const imageAnalysis = await getImageDescription(imageFile.buffer);
           
           // Get all cases
           const allCases = await db.query.cases.findMany({
@@ -112,14 +124,23 @@ export function registerRoutes(app: Express): Server {
           // Compare image with each case
           const casesWithScores = await Promise.all(
             allCases.map(async (case_) => {
-              if (!case_.imageUrl) return { ...case_, similarity: 0 };
+              if (!case_.imageUrl) return { ...case_, similarity: 0, matchedFeatures: [] };
               
-              const similarity = await compareImageWithDescription(
+              const characteristics = case_.aiCharacteristics ? 
+                JSON.parse(case_.aiCharacteristics) : undefined;
+              
+              const { similarity, matchedFeatures } = await compareImageWithDescription(
                 imageFile.buffer,
-                case_.description
+                case_.description,
+                characteristics
               );
               
-              return { ...case_, similarity };
+              return { 
+                ...case_,
+                similarity,
+                matchedFeatures,
+                aiAnalysis: imageAnalysis.characteristics 
+              };
             })
           );
           
@@ -158,8 +179,8 @@ export function registerRoutes(app: Express): Server {
     if (existingUser) {
       res.json(existingUser);
     } else {
-      const newUser = await db.insert(users).values({ address }).returning();
-      res.json(newUser[0]);
+      const [newUser] = await db.insert(users).values({ address }).returning();
+      res.json(newUser);
     }
   });
 
