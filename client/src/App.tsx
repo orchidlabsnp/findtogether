@@ -2,6 +2,7 @@ import { Switch, Route } from "wouter";
 import Home from "@/pages/Home";
 import FindNow from "@/pages/FindNow";
 import Mission from "@/pages/Mission";
+import SafeZones from "@/pages/SafeZones";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +17,7 @@ function App() {
             <Route path="/" component={Home} />
             <Route path="/find" component={FindNow} />
             <Route path="/mission" component={Mission} />
+            <Route path="/safe-zones" component={SafeZones} />
             <Route>
               <motion.div
                 initial={{ opacity: 0 }}

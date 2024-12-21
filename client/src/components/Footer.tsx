@@ -41,6 +41,13 @@ export default function Footer() {
                 </a>
               </li>
               <li>
+                <Link href="/safe-zones">
+                  <a className="text-gray-400 hover:text-white transition-colors">
+                    Safe Zones Map
+                  </a>
+                </Link>
+              </li>
+              <li>
                 <a href="#" className="text-gray-400 hover:text-white transition-colors">
                   Join Community
                 </a>

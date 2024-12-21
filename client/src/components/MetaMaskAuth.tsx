@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import ProfileCard from "./ProfileCard";
 import { connectWallet, getAddress } from "@/lib/web3";
 import { useQuery, useMutation } from "@tanstack/react-query";
 
@@ -44,11 +45,7 @@ export default function MetaMaskAuth() {
   };
 
   if (address) {
-    return (
-      <Button variant="outline">
-        {`${address.slice(0, 6)}...${address.slice(-4)}`}
-      </Button>
-    );
+    return <ProfileCard address={address} />;
   }
 
   return (
