@@ -67,15 +67,52 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/cases/search", async (req, res) => {
-    const { query } = req.query;
-    const searchResults = await db.query.cases.findMany({
-      where: (cases, { or, ilike }) => 
-        or(
-          ilike(cases.childName, `%${query}%`),
-          ilike(cases.location, `%${query}%`)
-        )
-    });
-    res.json(searchResults);
+    const { query, searchType } = req.query;
+    
+    if (!query) {
+      return res.status(400).send("Search query is required");
+    }
+
+    try {
+      let searchResults;
+      
+      switch (searchType) {
+        case 'location':
+          searchResults = await db.query.cases.findMany({
+            where: (cases, { ilike }) => ilike(cases.location, `%${query}%`),
+            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+          });
+          break;
+        
+        case 'text':
+          searchResults = await db.query.cases.findMany({
+            where: (cases, { or, ilike }) => 
+              or(
+                ilike(cases.childName, `%${query}%`),
+                ilike(cases.description, `%${query}%`)
+              ),
+            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+          });
+          break;
+        
+        default:
+          // Combined search
+          searchResults = await db.query.cases.findMany({
+            where: (cases, { or, ilike }) => 
+              or(
+                ilike(cases.childName, `%${query}%`),
+                ilike(cases.location, `%${query}%`),
+                ilike(cases.description, `%${query}%`)
+              ),
+            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+          });
+      }
+      
+      res.json(searchResults);
+    } catch (error) {
+      console.error('Search error:', error);
+      res.status(500).send("Error performing search");
+    }
   });
 
   app.post("/api/users", async (req, res) => {

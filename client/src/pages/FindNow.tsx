@@ -6,10 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import type { Case } from "@db/schema";
 
 export default function FindNow() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams, setSearchParams] = useState({ query: "", type: "all" });
 
   const { data: cases, isLoading } = useQuery<Case[]>({
-    queryKey: [searchQuery ? `/api/cases/search?query=${searchQuery}` : "/api/cases"],
+    queryKey: [
+      searchParams.query 
+        ? `/api/cases/search?query=${searchParams.query}&searchType=${searchParams.type}` 
+        : "/api/cases"
+    ],
   });
 
   return (
@@ -20,7 +24,11 @@ export default function FindNow() {
         className="mb-12"
       >
         <h1 className="text-4xl font-bold text-gray-900 mb-6">Find Missing Children</h1>
-        <SearchSection onSearch={setSearchQuery} />
+        <SearchSection 
+          onSearch={(query, searchType) => 
+            setSearchParams({ query, type: searchType })
+          } 
+        />
       </motion.div>
 
       {isLoading ? (
