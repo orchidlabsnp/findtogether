@@ -5,8 +5,13 @@ import CaseCard from "@/components/CaseCard";
 import { useQuery } from "@tanstack/react-query";
 import type { Case } from "@db/schema";
 
+interface SearchSectionProps {
+  onSearch: (query: string, searchType: string, imageResults?: Case[]) => void;
+}
+
 export default function FindNow() {
   const [searchParams, setSearchParams] = useState({ query: "", type: "all" });
+  const [imageResults, setImageResults] = useState<Case[] | null>(null);
 
   const { data: cases, isLoading } = useQuery<Case[]>({
     queryKey: [
@@ -14,7 +19,10 @@ export default function FindNow() {
         ? `/api/cases/search?query=${searchParams.query}&searchType=${searchParams.type}` 
         : "/api/cases"
     ],
+    enabled: !imageResults, // Disable the query when we have image results
   });
+
+  const displayedCases = imageResults || cases;
 
   return (
     <div className="container mx-auto px-6 py-12">
@@ -25,9 +33,14 @@ export default function FindNow() {
       >
         <h1 className="text-4xl font-bold text-gray-900 mb-6">Find Missing Children</h1>
         <SearchSection 
-          onSearch={(query, searchType) => 
-            setSearchParams({ query, type: searchType })
-          } 
+          onSearch={(query, searchType, results) => {
+            if (results) {
+              setImageResults(results);
+            } else {
+              setImageResults(null);
+              setSearchParams({ query, type: searchType });
+            }
+          }} 
         />
       </motion.div>
 

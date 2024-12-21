@@ -21,9 +21,31 @@ export default function SearchSection({ onSearch }: SearchSectionProps) {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch(query, searchType);
+    
+    if (searchType === "image" && selectedImage) {
+      const formData = new FormData();
+      formData.append("file", selectedImage);
+      
+      try {
+        const response = await fetch(`/api/cases/search?searchType=image`, {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        
+        const results = await response.json();
+        onSearch("", "image", results);
+      } catch (error) {
+        console.error("Error performing image search:", error);
+      }
+    } else {
+      onSearch(query, searchType);
+    }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

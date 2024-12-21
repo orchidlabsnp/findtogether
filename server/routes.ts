@@ -5,6 +5,7 @@ import { cases, users } from "@db/schema";
 import { eq } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
+import { compareImageWithDescription, getImageDescription } from "./services/openai";
 
 const storage = multer.diskStorage({
   destination: "./uploads",
@@ -69,8 +70,8 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/cases/search", async (req, res) => {
     const { query, searchType } = req.query;
     
-    if (!query) {
-      return res.status(400).send("Search query is required");
+    if (!query && !req.files) {
+      return res.status(400).send("Search query or image is required");
     }
 
     try {
@@ -93,6 +94,39 @@ export function registerRoutes(app: Express): Server {
               ),
             orderBy: (cases, { desc }) => [desc(cases.createdAt)]
           });
+          break;
+
+        case 'image':
+          if (!req.files || !Array.isArray(req.files)) {
+            return res.status(400).send("Image file is required for image search");
+          }
+          
+          const imageFile = req.files[0];
+          const imageDescription = await getImageDescription(imageFile.buffer);
+          
+          // Get all cases
+          const allCases = await db.query.cases.findMany({
+            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+          });
+          
+          // Compare image with each case
+          const casesWithScores = await Promise.all(
+            allCases.map(async (case_) => {
+              if (!case_.imageUrl) return { ...case_, similarity: 0 };
+              
+              const similarity = await compareImageWithDescription(
+                imageFile.buffer,
+                case_.description
+              );
+              
+              return { ...case_, similarity };
+            })
+          );
+          
+          // Filter and sort by similarity score
+          searchResults = casesWithScores
+            .filter(case_ => case_.similarity > 0.6) // threshold for similarity
+            .sort((a, b) => b.similarity - a.similarity);
           break;
         
         default:
