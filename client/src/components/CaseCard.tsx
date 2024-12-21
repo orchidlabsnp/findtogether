@@ -71,6 +71,11 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
               <Phone className="h-4 w-4" />
               <span>Contact: {case_.contactInfo}</span>
             </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Badge variant="outline" className="capitalize">
+                {case_.caseType?.replace('_', ' ') || 'Not specified'}
+              </Badge>
+            </div>
             <p className="text-sm text-gray-600 line-clamp-2">
               <Info className="h-4 w-4 inline mr-2" />
               About: {case_.description}
