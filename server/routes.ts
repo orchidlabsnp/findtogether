@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { cases, users } from "@db/schema";
@@ -27,6 +27,8 @@ const upload = multer({
 });
 
 export function registerRoutes(app: Express): Server {
+  // Serve uploaded files
+  app.use('/uploads', express.static('uploads'));
   app.get("/api/cases", async (req, res) => {
     const allCases = await db.query.cases.findMany({
       orderBy: (cases, { desc }) => [desc(cases.createdAt)]

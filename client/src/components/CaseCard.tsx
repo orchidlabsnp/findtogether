@@ -14,19 +14,26 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
   return (
     <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
       <Card className="overflow-hidden">
-        <CardHeader className="relative h-56 p-0">
-          {case_.imageUrl ? (
-            <img
-              src={case_.imageUrl}
-              alt={case_.childName}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-              <span className="text-gray-400">No image available</span>
-            </div>
-          )}
-          <Badge className="absolute top-4 right-4 bg-white/90">
+        <CardHeader className="relative h-56 p-0 overflow-hidden">
+          <div className="absolute inset-0 bg-gray-100">
+            {case_.imageUrl ? (
+              <img
+                src={case_.imageUrl}
+                alt={case_.childName}
+                className="w-full h-full object-cover transition-transform hover:scale-105"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = 'https://placehold.co/600x400?text=No+Image';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="text-gray-400">No image available</span>
+              </div>
+            )}
+          </div>
+          <Badge className="absolute top-4 right-4 bg-white/90 z-10">
             Case #{case_.id}
           </Badge>
         </CardHeader>
