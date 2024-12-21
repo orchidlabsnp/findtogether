@@ -3,6 +3,28 @@ import { createServer, type Server } from "http";
 import { db } from "@db";
 import { cases, users } from "@db/schema";
 import { eq } from "drizzle-orm";
+import multer from "multer";
+import path from "path";
+
+const storage = multer.diskStorage({
+  destination: "./uploads",
+  filename: function (req, file, cb) {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|mp4|mov|avi/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error("Only images and videos are allowed!"));
+  }
+});
 
 export function registerRoutes(app: Express): Server {
   app.get("/api/cases", async (req, res) => {
@@ -12,13 +34,18 @@ export function registerRoutes(app: Express): Server {
     res.json(allCases);
   });
 
-  app.post("/api/cases", async (req, res) => {
+  app.post("/api/cases", upload.array("files"), async (req, res) => {
     try {
       const { childName, age, location, description, contactInfo } = req.body;
+      const files = req.files as Express.Multer.File[];
       
       if (!childName || !age || !location || !description || !contactInfo) {
         return res.status(400).send("All fields are required");
       }
+
+      // Get the first image file to use as the main image
+      const imageFile = files?.find(file => file.mimetype.startsWith('image/'));
+      const imageUrl = imageFile ? `/uploads/${imageFile.filename}` : undefined;
 
       const newCase = await db.insert(cases).values({
         childName,
@@ -26,6 +53,7 @@ export function registerRoutes(app: Express): Server {
         location,
         description,
         contactInfo,
+        imageUrl,
         status: 'open'
       }).returning();
 

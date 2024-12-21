@@ -184,8 +184,15 @@ export default function ReportCase() {
                     ref={fileRef}
                     multiple
                     accept="image/*,video/*"
-                    className="cursor-pointer"
+                    className="cursor-pointer file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-primary file:text-primary-foreground
+                    hover:file:bg-primary/90"
                   />
+                  <p className="text-sm text-muted-foreground">
+                    You can upload multiple images and videos
+                  </p>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={isPending}>
