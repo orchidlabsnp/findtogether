@@ -44,15 +44,28 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/cases", upload.array("files"), async (req, res) => {
     try {
+      console.log('Received case submission:', { 
+        body: req.body,
+        files: req.files ? (req.files as Express.Multer.File[]).map(f => f.originalname) : []
+      });
+
       const { childName, age, location, description, contactInfo, caseType } = req.body;
       const files = req.files as Express.Multer.File[];
 
       if (!childName || !age || !location || !description || !contactInfo || !caseType) {
+        console.log('Missing required fields:', { childName, age, location, description, contactInfo, caseType });
         return res.status(400).send("All fields are required");
+      }
+
+      // Ensure uploads directory exists
+      if (!fs.existsSync('./uploads')) {
+        fs.mkdirSync('./uploads', { recursive: true });
       }
 
       // Get the first image file to use as the main image
       const imageFile = files?.find(file => file.mimetype.startsWith('image/'));
+      console.log('Processing image file:', imageFile?.originalname);
+      
       let imageUrl;
       let aiCharacteristics;
       let ipfsHash;
