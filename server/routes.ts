@@ -118,6 +118,14 @@ export function registerRoutes(app: Express): Server {
         try {
           console.log('Initiating blockchain storage for case:', newCase.id);
           
+          console.log('Preparing blockchain report with data:', {
+            caseType,
+            age: parseInt(age),
+            location,
+            contactInfoLength: contactInfo?.length,
+            hasAiCharacteristics: !!aiCharacteristics
+          });
+
           const blockchainResult = await createBlockchainReport(
             caseType,
             childName,
@@ -127,6 +135,10 @@ export function registerRoutes(app: Express): Server {
             contactInfo,
             aiCharacteristics || ''
           );
+
+          if (!blockchainResult || blockchainResult.status !== 'success') {
+            throw new Error('Blockchain storage failed: ' + JSON.stringify(blockchainResult));
+          }
           
           console.log('Blockchain transaction completed:', {
             caseId: newCase.id,

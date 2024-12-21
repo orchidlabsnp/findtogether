@@ -370,7 +370,7 @@ export async function createBlockchainReport(
       )
       .send({ 
         from: account.address,
-        gas: Math.floor(gasEstimate * 1.2) // Add 20% buffer for safety
+        gas: String(Math.floor(Number(gasEstimate) * 1.2)) // Convert BigInt to number, add buffer, then convert to string
       });
 
     const reportId = Number(result.events.ReportCreated.returnValues.reportId);
