@@ -177,7 +177,7 @@ export async function analyzeAndNotify(case_: Case) {
       notificationService.broadcastSafetyAlert(
         '🚨 CRITICAL SAFETY ALERT 🚨',
         `IMMEDIATE ACTION REQUIRED: Case #${case_.id}
-         Type: ${case_.caseType.toUpperCase()}
+         Type: ${case_.caseType?.toUpperCase()}
          Location: ${case_.location}
          Age: ${case_.age}
          Risk Level: ${riskLevel.level}
