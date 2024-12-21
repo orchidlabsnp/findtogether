@@ -83,7 +83,6 @@ const emergencyContacts: EmergencyContact[] = [
     description: '24/7 crisis support via text message'
   }
 ];
-
 interface RiskAssessment {
   level: 'EXTREME' | 'HIGH' | 'MEDIUM' | 'LOW';
   severity: string;
@@ -156,6 +155,7 @@ function calculateRiskLevel(case_: Case, aiAnalysis: any | null): RiskAssessment
   return baseRisk;
 }
 
+
 export async function analyzeAndNotify(case_: Case) {
   const notificationService = getNotificationService();
   // Determine if the case is critical based on type and AI analysis
@@ -177,7 +177,7 @@ export async function analyzeAndNotify(case_: Case) {
       notificationService.broadcastSafetyAlert(
         '🚨 CRITICAL SAFETY ALERT 🚨',
         `IMMEDIATE ACTION REQUIRED: Case #${case_.id}
-         Type: ${case_.caseType?.toUpperCase()}
+         Type: ${case_.caseType.toUpperCase()}
          Location: ${case_.location}
          Age: ${case_.age}
          Risk Level: ${riskLevel.level}
