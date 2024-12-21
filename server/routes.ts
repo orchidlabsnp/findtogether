@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
+import { initializeNotificationService } from "./services/notifications";
 
 const storage = multer.diskStorage({
   destination: "./uploads",
@@ -185,5 +186,9 @@ export function registerRoutes(app: Express): Server {
   });
 
   const httpServer = createServer(app);
+  
+  // Initialize notification service
+  initializeNotificationService(httpServer);
+
   return httpServer;
 }

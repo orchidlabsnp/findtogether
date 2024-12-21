@@ -7,11 +7,13 @@ import ReportCase from "@/pages/ReportCase";
 import SafetyGame from "@/pages/SafetyGame";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import NotificationToast from "@/components/NotificationToast";
 import { motion, AnimatePresence } from "framer-motion";
 
 function App() {
   return (
     <div className="min-h-screen flex flex-col">
+      <NotificationToast />
       <Header />
       <main className="flex-grow">
         <AnimatePresence mode="wait">
