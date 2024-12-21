@@ -26,6 +26,8 @@ export default function SearchSection({ onSearch }: SearchSectionProps) {
     
     try {
       if (searchType === "image" && selectedImage) {
+        console.log('Starting image search with file:', selectedImage.name);
+        
         const formData = new FormData();
         formData.append("files", selectedImage);
         formData.append("searchType", "image");
@@ -36,10 +38,21 @@ export default function SearchSection({ onSearch }: SearchSectionProps) {
         });
         
         if (!response.ok) {
-          throw new Error(await response.text());
+          const errorText = await response.text();
+          console.error('Image search failed:', errorText);
+          throw new Error(errorText);
         }
         
+        console.log('Image search completed, processing results...');
         const results = await response.json();
+        console.log('Search results:', results);
+        
+        // Clear the file input and selected image after successful search
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        setSelectedImage(null);
+        
         onSearch("", "image", results);
       } else if (searchType.startsWith('child_')) {
         onSearch(searchType, 'case_type');

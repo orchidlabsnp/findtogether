@@ -22,7 +22,7 @@ export default function FindNow() {
     enabled: !imageResults, // Disable the query when we have image results
   });
 
-  const displayedCases = imageResults || cases;
+  const displayedCases = imageResults || cases || [];
 
   return (
     <div className="container mx-auto px-6 py-12">

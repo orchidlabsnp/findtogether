@@ -16,16 +16,21 @@ const storage = multer.diskStorage({
   }
 });
 
+// Ensure uploads directory exists
+if (!fs.existsSync('./uploads')) {
+  fs.mkdirSync('./uploads', { recursive: true });
+}
+
 const upload = multer({ 
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|mp4|mov|avi/;
+    const allowedTypes = /jpeg|jpg|png|gif/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
     if (extname && mimetype) {
       return cb(null, true);
     }
-    cb(new Error("Only images and videos are allowed!"));
+    cb(new Error("Only image files (JPEG, PNG, GIF) are allowed!"));
   }
 });
 
@@ -142,37 +147,52 @@ export function registerRoutes(app: Express): Server {
           
           try {
             const imageFile = files[0];
+            
+            // Save image to disk first
+            const filename = `${Date.now()}-${imageFile.originalname}`;
+            await fs.promises.writeFile(`./uploads/${filename}`, imageFile.buffer);
+            const imageUrl = `/uploads/${filename}`;
+            
+            console.log('Processing image analysis...');
             const imageAnalysis = await getImageDescription(imageFile.buffer);
-            console.log('Image analysis:', imageAnalysis);
+            console.log('Image analysis completed:', imageAnalysis);
           
             // Get all cases
             const allCases = await db.query.cases.findMany({
               orderBy: (cases, { desc }) => [desc(cases.createdAt)]
             });
             
-            console.log('Found cases:', allCases.length);
+            console.log('Found cases for comparison:', allCases.length);
           
             // Compare image with each case
             const casesWithScores = await Promise.all(
               allCases.map(async (case_) => {
                 try {
                   if (!case_.imageUrl) {
-                    console.log(`Case ${case_.id} has no image`);
+                    console.log(`Case ${case_.id} skipped - no image`);
                     return { ...case_, similarity: 0, matchedFeatures: [] };
                   }
                   
+                  // Read the case image file
+                  const casePath = path.join(process.cwd(), case_.imageUrl.replace(/^\//, ''));
+                  if (!fs.existsSync(casePath)) {
+                    console.log(`Case ${case_.id} image not found at ${casePath}`);
+                    return { ...case_, similarity: 0, matchedFeatures: [] };
+                  }
+                  
+                  const caseImageBuffer = await fs.promises.readFile(casePath);
                   const characteristics = case_.aiCharacteristics ? 
                     JSON.parse(case_.aiCharacteristics) : undefined;
                   
-                  console.log(`Comparing case ${case_.id} with characteristics:`, characteristics);
+                  console.log(`Comparing case ${case_.id} with characteristics`);
                   
                   const { similarity, matchedFeatures } = await compareImageWithDescription(
-                    imageFile.buffer,
+                    caseImageBuffer,
                     case_.description,
                     characteristics
                   );
                   
-                  console.log(`Case ${case_.id} similarity:`, similarity);
+                  console.log(`Case ${case_.id} comparison completed - similarity: ${similarity}`);
                   
                   return { 
                     ...case_,
@@ -189,10 +209,10 @@ export function registerRoutes(app: Express): Server {
           
             // Filter and sort by similarity score
             searchResults = casesWithScores
-              .filter(case_ => case_.similarity > 0.5) // lowered threshold for better results
+              .filter(case_ => case_.similarity > 0.4) // Further lowered threshold for testing
               .sort((a, b) => b.similarity - a.similarity);
             
-            console.log('Search results:', searchResults.length);
+            console.log(`Found ${searchResults.length} similar cases`);
           } catch (error) {
             console.error('Error processing image search:', error);
             return res.status(500).send("Error processing image search");
