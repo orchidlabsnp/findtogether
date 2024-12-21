@@ -8,6 +8,7 @@ import path from "path";
 import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { initializeNotificationService } from "./services/notifications";
+import { analyzeAndNotify } from "./services/reportAnalysis";
 
 const storage = multer.diskStorage({
   destination: "./uploads",
@@ -94,7 +95,13 @@ export function registerRoutes(app: Express): Server {
         status: 'open'
       }).returning();
 
-      res.json(newCase);
+      // Analyze the case and send notifications if necessary
+      const analysisResult = await analyzeAndNotify(newCase);
+      
+      res.json({
+        case: newCase,
+        analysis: analysisResult
+      });
     } catch (error) {
       console.error("Error creating case:", error);
       res.status(500).send("Failed to create case");
