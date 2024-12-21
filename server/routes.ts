@@ -13,8 +13,27 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/cases", async (req, res) => {
-    const newCase = await db.insert(cases).values(req.body).returning();
-    res.json(newCase[0]);
+    try {
+      const { childName, age, location, description, contactInfo } = req.body;
+      
+      if (!childName || !age || !location || !description || !contactInfo) {
+        return res.status(400).send("All fields are required");
+      }
+
+      const newCase = await db.insert(cases).values({
+        childName,
+        age: parseInt(age),
+        location,
+        description,
+        contactInfo,
+        status: 'open'
+      }).returning();
+
+      res.json(newCase[0]);
+    } catch (error) {
+      console.error("Error creating case:", error);
+      res.status(500).send("Failed to create case");
+    }
   });
 
   app.get("/api/cases/search", async (req, res) => {

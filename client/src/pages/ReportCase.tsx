@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 
 const reportCaseSchema = z.object({
   childName: z.string().min(1, "Child's name is required"),
-  age: z.string().transform(Number).pipe(z.number().min(0).max(18)),
+  age: z.number().min(0).max(18),
   location: z.string().min(1, "Location is required"),
   description: z.string().min(10, "Please provide more details"),
   contactInfo: z.string().min(1, "Contact information is required"),
@@ -40,7 +40,7 @@ export default function ReportCase() {
     resolver: zodResolver(reportCaseSchema),
     defaultValues: {
       childName: "",
-      age: "0",
+      age: 0,
       location: "",
       description: "",
       contactInfo: "",
