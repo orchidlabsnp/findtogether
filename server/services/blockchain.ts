@@ -292,43 +292,43 @@ if (!privateKey.startsWith('0x')) {
   privateKey = '0x' + privateKey;
 }
 
-try {
-  // Initialize Web3 with HTTP provider
-  web3 = new Web3(
-    new Web3.providers.HttpProvider(
-      `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      {
-        timeout: 30000, // 30 seconds timeout
-      }
-    )
-  );
+// Initialize Web3 and contract
+async function initializeBlockchain() {
+  try {
+    // Initialize Web3 with WebSocket provider for better stability
+    web3 = new Web3(`wss://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`);
 
-  // Add account to wallet with proper typing
-  account = web3.eth.accounts.privateKeyToAccount(privateKey);
-  web3.eth.accounts.wallet.add(account);
+    // Add account to wallet
+    account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
 
-  // Initialize contract with type safety
-  const CONTRACT_ADDRESS = "0xE7facc9f57fc0DD54f3Ef1A422345835edeFE0f2";
-  contract = new web3.eth.Contract(
-    ChildProtectionReports.abi as ContractAbi,
-    CONTRACT_ADDRESS
-  );
+    // Initialize contract
+    const CONTRACT_ADDRESS = "0xE7facc9f57fc0DD54f3Ef1A422345835edeFE0f2";
+    contract = new web3.eth.Contract(
+      ChildProtectionReports.abi as ContractAbi,
+      CONTRACT_ADDRESS
+    );
 
-  // Verify contract connection
-  console.log('Verifying contract connection...');
-  const reportCount = await contract.methods.getReportCount().call();
-  console.log('Contract connection verified. Current report count:', reportCount);
-  console.log('Blockchain service initialized successfully');
-} catch (error) {
-  console.error('Error initializing blockchain service:', error);
-  if (error instanceof Error) {
-    console.error('Details:', {
-      message: error.message,
-      stack: error.stack
-    });
+    // Verify connection by calling a view function
+    console.log('Verifying contract connection...');
+    const reportCount = await contract.methods.getReportCount().call();
+    console.log('Contract connection verified. Current report count:', reportCount);
+    
+    return true;
+  } catch (error) {
+    console.error('Error initializing blockchain service:', error);
+    if (error instanceof Error) {
+      console.error('Details:', {
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    return false;
   }
-  throw new Error('Failed to initialize blockchain connection. Please check your configuration.');
 }
+
+// Initialize blockchain connection
+await initializeBlockchain();
 
 export async function createBlockchainReport(
   caseType: string,
@@ -341,37 +341,57 @@ export async function createBlockchainReport(
 ): Promise<{ reportId: number; transactionHash: string; status: string }> {
   console.log('Initiating blockchain report creation...');
   
+  // Ensure blockchain connection is active
+  if (!contract) {
+    console.log('Reconnecting to blockchain...');
+    const connected = await initializeBlockchain();
+    if (!connected) {
+      throw new Error('Failed to connect to blockchain');
+    }
+  }
+  
   try {
-    // Estimate gas first to ensure transaction will succeed
-    const gasEstimate = await contract.methods
-      .createReport(
-        caseType,
-        childName,
-        age,
-        location,
-        description,
-        contactInfo,
-        aiCharacteristics
-      )
-      .estimateGas({ from: account.address });
+    // Create method call
+    const method = contract.methods.createReport(
+      caseType,
+      childName,
+      age,
+      location,
+      description,
+      contactInfo,
+      aiCharacteristics
+    );
 
-    console.log('Gas estimation successful, proceeding with transaction...');
+    // Estimate gas with error handling
+    console.log('Estimating gas for transaction...');
+    let gasEstimate;
+    try {
+      gasEstimate = await method.estimateGas({ from: account.address });
+      console.log('Gas estimation successful:', gasEstimate.toString());
+    } catch (gasError: any) {
+      console.error('Gas estimation failed:', gasError);
+      throw new Error(`Gas estimation failed: ${gasError.message}`);
+    }
 
-    // Send the transaction with the estimated gas
-    const result = await contract.methods
-      .createReport(
-        caseType,
-        childName,
-        age,
-        location,
-        description,
-        contactInfo,
-        aiCharacteristics
-      )
-      .send({ 
-        from: account.address,
-        gas: String(Math.floor(Number(gasEstimate) * 1.2)) // Convert BigInt to number, add buffer, then convert to string
-      });
+    // Get current gas price
+    const gasPrice = await web3.eth.getGasPrice();
+    console.log('Current gas price:', gasPrice);
+
+    // Prepare transaction parameters
+    const txParams = {
+      from: account.address,
+      gas: Math.floor(Number(gasEstimate) * 1.2).toString(), // 20% buffer
+      gasPrice: gasPrice
+    };
+
+    console.log('Sending transaction with params:', txParams);
+
+    // Send transaction
+    const result = await method.send(txParams);
+
+    if (!result.events?.ReportCreated) {
+      throw new Error('Transaction successful but ReportCreated event not found');
+    }
 
     const reportId = Number(result.events.ReportCreated.returnValues.reportId);
     console.log('Report successfully created on blockchain:', {
@@ -389,14 +409,14 @@ export async function createBlockchainReport(
   } catch (error: any) {
     console.error('Blockchain report creation error:', error);
     
-    // Provide more detailed error information
     const errorDetails = {
       message: error.message,
-      code: error.code,
-      reason: error.reason || 'Unknown error'
+      code: error.code || 'UNKNOWN',
+      reason: error.reason || 'Unknown error',
+      data: error.data || null
     };
     
-    console.error('Error details:', errorDetails);
+    console.error('Detailed error:', errorDetails);
     
     throw {
       error: 'Failed to create report on blockchain',
