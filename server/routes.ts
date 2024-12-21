@@ -112,13 +112,21 @@ export function registerRoutes(app: Express): Server {
             orderBy: (cases, { desc }) => [desc(cases.createdAt)]
           });
           break;
+
+        case 'case_type':
+          searchResults = await db.query.cases.findMany({
+            where: (cases, { eq }) => eq(cases.caseType, query as string),
+            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+          });
+          break;
         
         case 'text':
           searchResults = await db.query.cases.findMany({
             where: (cases, { or, ilike }) => 
               or(
                 ilike(cases.childName, `%${query}%`),
-                ilike(cases.description, `%${query}%`)
+                ilike(cases.description, `%${query}%`),
+                ilike(cases.caseType, `%${query}%`)
               ),
             orderBy: (cases, { desc }) => [desc(cases.createdAt)]
           });

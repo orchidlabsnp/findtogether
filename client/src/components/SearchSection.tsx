@@ -26,7 +26,7 @@ export default function SearchSection({ onSearch }: SearchSectionProps) {
     
     if (searchType === "image" && selectedImage) {
       const formData = new FormData();
-      formData.append("file", selectedImage);
+      formData.append("files", selectedImage);
       
       try {
         const response = await fetch(`/api/cases/search?searchType=image`, {
@@ -43,6 +43,8 @@ export default function SearchSection({ onSearch }: SearchSectionProps) {
       } catch (error) {
         console.error("Error performing image search:", error);
       }
+    } else if (searchType.startsWith('child_')) {
+      onSearch(searchType, 'case_type');
     } else {
       onSearch(query, searchType);
     }
@@ -83,6 +85,10 @@ export default function SearchSection({ onSearch }: SearchSectionProps) {
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="text">Text</SelectItem>
                   <SelectItem value="location">Location</SelectItem>
+                  <SelectItem value="case_type">Case Type</SelectItem>
+                  <SelectItem value="child_missing">Missing Child</SelectItem>
+                  <SelectItem value="child_labour">Child Labor</SelectItem>
+                  <SelectItem value="child_harassment">Child Harassment</SelectItem>
                 </SelectContent>
               </Select>
             </div>
