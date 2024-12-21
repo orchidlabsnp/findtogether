@@ -20,8 +20,12 @@ export default function NotificationToast() {
         }[notification.severity];
 
         toast({
-          title: notification.title,
-          icon: icon,
+          title: (
+            <div className="flex items-center gap-2">
+              {icon}
+              <span>{notification.title}</span>
+            </div>
+          ),
           description: (
             <div className="flex flex-col gap-1">
               <p>{notification.message}</p>

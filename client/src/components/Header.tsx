@@ -26,20 +26,16 @@ export default function Header() {
     >
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/">
-            <a className="text-2xl font-bold text-blue-600">FindTogether</a>
+          <Link href="/" className="text-2xl font-bold text-blue-600">
+            FindTogether
           </Link>
 
           <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/find">
-              <a className="text-gray-700 hover:text-blue-600 transition-colors">
-                Find Now
-              </a>
+            <Link href="/find" className="text-gray-700 hover:text-blue-600 transition-colors">
+              Find Now
             </Link>
-            <Link href="/mission">
-              <a className="text-gray-700 hover:text-blue-600 transition-colors">
-                Mission
-              </a>
+            <Link href="/mission" className="text-gray-700 hover:text-blue-600 transition-colors">
+              Mission
             </Link>
             <MetaMaskAuth />
           </nav>
