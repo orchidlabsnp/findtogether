@@ -125,7 +125,11 @@ export default function ReportCase() {
                     <FormItem>
                       <FormLabel>Age</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input 
+                          type="number" 
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          value={field.value}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
