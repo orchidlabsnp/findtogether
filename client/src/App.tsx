@@ -3,6 +3,7 @@ import Home from "@/pages/Home";
 import FindNow from "@/pages/FindNow";
 import Mission from "@/pages/Mission";
 import SafeZones from "@/pages/SafeZones";
+import ReportCase from "@/pages/ReportCase";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,6 +19,7 @@ function App() {
             <Route path="/find" component={FindNow} />
             <Route path="/mission" component={Mission} />
             <Route path="/safe-zones" component={SafeZones} />
+            <Route path="/report-case" component={ReportCase} />
             <Route>
               <motion.div
                 initial={{ opacity: 0 }}
