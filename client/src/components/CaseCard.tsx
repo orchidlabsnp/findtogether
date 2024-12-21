@@ -15,7 +15,17 @@ import {
 import { format } from "date-fns";
 
 interface CaseCardProps {
-  case: Case;
+  case: Case & {
+    similarity?: number;
+    matchedFeatures?: string[];
+    matchDetails?: {
+      physicalMatch: number;
+      clothingMatch: number;
+      distinctiveFeatureMatch: number;
+      ageMatch: number;
+    } | null;
+    aiAnalysis?: any;
+  };
 }
 
 export default function CaseCard({ case: case_ }: CaseCardProps) {
@@ -53,9 +63,16 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
                 Age: {case_.age} years
               </p>
             </div>
-            <Badge variant={case_.status === 'open' ? 'destructive' : 'default'}>
-              {case_.status.toUpperCase()}
-            </Badge>
+            <div className="flex gap-2">
+              <Badge variant={case_.status === 'open' ? 'destructive' : 'default'}>
+                {case_.status?.toUpperCase() || 'OPEN'}
+              </Badge>
+              {case_.similarity !== undefined && (
+                <Badge variant={case_.similarity > 0.7 ? 'default' : 'secondary'}>
+                  {Math.round(case_.similarity * 100)}% Match
+                </Badge>
+              )}
+            </div>
           </div>
 
           <div className="space-y-3 mb-6">

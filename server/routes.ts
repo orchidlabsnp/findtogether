@@ -164,52 +164,87 @@ export function registerRoutes(app: Express): Server {
             
             console.log('Found cases for comparison:', allCases.length);
           
-            // Compare image with each case
+            // Compare image with each case using enhanced analysis
             const casesWithScores = await Promise.all(
               allCases.map(async (case_) => {
                 try {
                   if (!case_.imageUrl) {
                     console.log(`Case ${case_.id} skipped - no image`);
-                    return { ...case_, similarity: 0, matchedFeatures: [] };
+                    return { 
+                      ...case_, 
+                      similarity: 0, 
+                      matchedFeatures: [],
+                      matchDetails: null
+                    };
                   }
                   
                   // Read the case image file
                   const casePath = path.join(process.cwd(), case_.imageUrl.replace(/^\//, ''));
                   if (!fs.existsSync(casePath)) {
                     console.log(`Case ${case_.id} image not found at ${casePath}`);
-                    return { ...case_, similarity: 0, matchedFeatures: [] };
+                    return { 
+                      ...case_, 
+                      similarity: 0, 
+                      matchedFeatures: [],
+                      matchDetails: null
+                    };
                   }
                   
                   const caseImageBuffer = await fs.promises.readFile(casePath);
                   const characteristics = case_.aiCharacteristics ? 
                     JSON.parse(case_.aiCharacteristics) : undefined;
                   
-                  console.log(`Comparing case ${case_.id} with characteristics`);
+                  console.log(`Analyzing case ${case_.id} with AI characteristics`);
                   
-                  const { similarity, matchedFeatures } = await compareImageWithDescription(
+                  const comparison = await compareImageWithDescription(
                     caseImageBuffer,
                     case_.description,
                     characteristics
                   );
                   
-                  console.log(`Case ${case_.id} comparison completed - similarity: ${similarity}`);
+                  console.log(`Case ${case_.id} analysis complete:`, {
+                    similarity: comparison.similarity,
+                    matchDetails: comparison.matchDetails
+                  });
                   
                   return { 
                     ...case_,
-                    similarity,
-                    matchedFeatures,
-                    aiAnalysis: imageAnalysis.characteristics 
+                    similarity: comparison.similarity,
+                    matchedFeatures: comparison.matchedFeatures,
+                    matchDetails: comparison.matchDetails,
+                    aiAnalysis: {
+                      ...imageAnalysis.characteristics,
+                      matchScore: comparison.similarity,
+                      matchBreakdown: comparison.matchDetails
+                    }
                   };
                 } catch (error) {
                   console.error(`Error processing case ${case_.id}:`, error);
-                  return { ...case_, similarity: 0, matchedFeatures: [] };
+                  return { 
+                    ...case_, 
+                    similarity: 0, 
+                    matchedFeatures: [],
+                    matchDetails: null
+                  };
                 }
               })
             );
           
-            // Filter and sort by similarity score
+            // Enhanced filtering with detailed match analysis
             searchResults = casesWithScores
-              .filter(case_ => case_.similarity > 0.4) // Further lowered threshold for testing
+              .filter(case_ => {
+                // Case must meet minimum overall similarity threshold
+                if (case_.similarity < 0.4) return false;
+                
+                // If match details available, apply additional criteria
+                if (case_.matchDetails) {
+                  const { physicalMatch, distinctiveFeatureMatch } = case_.matchDetails;
+                  // Require good physical match OR strong distinctive features
+                  return physicalMatch > 0.6 || distinctiveFeatureMatch > 0.7;
+                }
+                
+                return true;
+              })
               .sort((a, b) => b.similarity - a.similarity);
             
             console.log(`Found ${searchResults.length} similar cases`);
