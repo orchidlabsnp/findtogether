@@ -298,9 +298,20 @@ async function initializeBlockchain() {
     // Initialize Web3 with WebSocket provider for better stability
     web3 = new Web3(`wss://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`);
 
-    // Add account to wallet
-    account = web3.eth.accounts.privateKeyToAccount(privateKey);
-    web3.eth.accounts.wallet.add(account);
+    try {
+      // Create and add account with proper Web3 account type
+      const web3Account = web3.eth.accounts.privateKeyToAccount(privateKey);
+      web3.eth.accounts.wallet.add(web3Account);
+      account = web3Account;
+      
+      console.log('Account added successfully:', {
+        address: account.address,
+        hasPrivateKey: !!account.privateKey
+      });
+    } catch (accountError) {
+      console.error('Failed to initialize account:', accountError);
+      return false;
+    }
 
     // Initialize contract
     const CONTRACT_ADDRESS = "0xE7facc9f57fc0DD54f3Ef1A422345835edeFE0f2";
@@ -378,18 +389,45 @@ export async function createBlockchainReport(
     console.log('Current gas price:', gasPrice);
 
     // Prepare transaction parameters
+    // Convert gas price from BigInt to string
+    const gasPriceString = gasPrice.toString();
+    console.log('Converted gas price to string:', gasPriceString);
+
     const txParams = {
       from: account.address,
       gas: Math.floor(Number(gasEstimate) * 1.2).toString(), // 20% buffer
-      gasPrice: gasPrice
+      gasPrice: gasPriceString
     };
+
+    console.log('Transaction parameters prepared:', {
+      from: txParams.from,
+      gas: txParams.gas,
+      gasPrice: txParams.gasPrice
+    });
 
     console.log('Sending transaction with params:', txParams);
 
     // Send transaction
-    const result = await method.send(txParams);
+    console.log('Initiating transaction send...');
+    let result;
+    try {
+      result = await method.send(txParams);
+      console.log('Transaction sent successfully:', {
+        hash: result.transactionHash,
+        blockNumber: result.blockNumber,
+        gasUsed: result.gasUsed
+      });
+    } catch (sendError: any) {
+      console.error('Transaction send failed:', {
+        error: sendError.message,
+        code: sendError.code,
+        data: sendError.data
+      });
+      throw sendError;
+    }
 
     if (!result.events?.ReportCreated) {
+      console.error('Missing ReportCreated event in transaction result:', result);
       throw new Error('Transaction successful but ReportCreated event not found');
     }
 
