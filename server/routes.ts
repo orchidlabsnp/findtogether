@@ -83,6 +83,7 @@ export function registerRoutes(app: Express): Server {
         location,
         description,
         contactInfo,
+        caseType,
         imageUrl,
         aiCharacteristics,
         status: 'open'
