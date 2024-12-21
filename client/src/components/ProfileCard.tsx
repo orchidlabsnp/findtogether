@@ -48,11 +48,16 @@ export default function ProfileCard({ address, user }: ProfileCardProps) {
             </div>
 
             <div className="space-y-4">
-              <Button className="w-full" variant="outline" asChild>
-                <Link href="/report-case">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Report Case
-                </Link>
+              <Button 
+                className="w-full" 
+                variant="outline" 
+                onClick={() => {
+                  setIsOpen(false);
+                  window.location.href = "/report-case";
+                }}
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Report Case
               </Button>
               <Button className="w-full">
                 <BookmarkPlus className="h-4 w-4 mr-2" />
