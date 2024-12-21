@@ -96,12 +96,23 @@ export function registerRoutes(app: Express): Server {
       }).returning();
 
       // Analyze the case and send notifications if necessary
-      const analysisResult = await analyzeAndNotify(newCase);
-      
-      res.json({
-        case: newCase,
-        analysis: analysisResult
-      });
+      try {
+        const analysisResult = await analyzeAndNotify(newCase);
+        res.json({
+          case: newCase,
+          analysis: analysisResult
+        });
+      } catch (notificationError) {
+        console.error("Error in notification system:", notificationError);
+        // Still return success since the case was created
+        res.json({
+          case: newCase,
+          analysis: {
+            status: 'created',
+            message: 'Case created successfully, but notification system encountered an error'
+          }
+        });
+      }
     } catch (error) {
       console.error("Error creating case:", error);
       res.status(500).send("Failed to create case");

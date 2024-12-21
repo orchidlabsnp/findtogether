@@ -2,14 +2,18 @@ import nodemailer from 'nodemailer';
 import { getNotificationService } from './notifications';
 import type { Case } from '@db/schema';
 
-// Email transporter
+// Configure nodemailer with TLS
 const transporter = nodemailer.createTransport({
+  service: 'gmail',
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false,
+  secure: false, // Use TLS
   auth: {
     user: 'k1r03478.null@gmail.com',
-    pass: process.env.EMAIL_APP_PASSWORD // Will need to be set up
+    pass: process.env.GMAIL_APP_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false // For development
   }
 });
 
@@ -239,88 +243,96 @@ export async function analyzeAndNotify(case_: Case) {
 }
 
 async function sendEmailAlert(case_: Case) {
-  const priorityServices = case_.caseType === 'child_labour' 
-    ? ['Labor', 'Police', 'CPS']
-    : ['Police', 'CPS', 'Support'];
+  try {
+    const priorityServices = case_.caseType === 'child_labour' 
+      ? ['Labor', 'Police', 'CPS']
+      : ['Police', 'CPS', 'Support'];
 
-  const relevantContacts = emergencyContacts
-    .filter(contact => priorityServices.includes(contact.service))
-    .sort((a, b) => {
-      if (a.priority === 'immediate' && b.priority !== 'immediate') return -1;
-      if (b.priority === 'immediate' && a.priority !== 'immediate') return 1;
-      return 0;
+    const relevantContacts = emergencyContacts
+      .filter(contact => priorityServices.includes(contact.service))
+      .sort((a, b) => {
+        if (a.priority === 'immediate' && b.priority !== 'immediate') return -1;
+        if (b.priority === 'immediate' && a.priority !== 'immediate') return 1;
+        return 0;
+      });
+
+    const aiCharacteristics = case_.aiCharacteristics 
+      ? JSON.parse(case_.aiCharacteristics)
+      : null;
+
+    const emailContent = `
+      ⚠️ URGENT: Critical Child Safety Case Report ⚠️
+      
+      IMMEDIATE ACTION REQUIRED
+      
+      Case Details:
+      =============
+      Case ID: #${case_.id}
+      Type: ${case_.caseType?.toUpperCase()}
+      Child's Name: ${case_.childName}
+      Age: ${case_.age}
+      Location: ${case_.location}
+      Status: ${case_.status?.toUpperCase()}
+      Reported: ${new Date().toLocaleString()}
+
+      Detailed Description:
+      ====================
+      ${case_.description}
+
+      Contact Information:
+      ===================
+      ${case_.contactInfo}
+
+      ${aiCharacteristics ? `
+      AI Analysis:
+      ===========
+      ${Object.entries(aiCharacteristics)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n')}
+      ` : ''}
+
+      Priority Emergency Contacts:
+      ==========================
+      ${relevantContacts.map(contact => 
+        `${contact.service.toUpperCase()} - ${contact.name}
+         📞 ${contact.phone}
+         Priority: ${contact.priority.toUpperCase()}
+         Role: ${contact.description}
+        `
+      ).join('\n\n')}
+
+      Additional Support Services:
+      ==========================
+      ${emergencyContacts
+        .filter(contact => !priorityServices.includes(contact.service))
+        .map(contact => `${contact.service}: ${contact.phone}`)
+        .join('\n')}
+
+      Action Items:
+      ============
+      1. Contact primary emergency services immediately
+      2. Document all communications and responses
+      3. Follow up within 1 hour to ensure action has been taken
+      4. Coordinate with local authorities if needed
+
+      REMINDER: This is a time-sensitive case requiring immediate attention.
+      Document all actions taken and maintain strict confidentiality.
+    `;
+
+    await transporter.sendMail({
+      from: 'k1r03478.null@gmail.com',
+      to: 'k1r03478.null@gmail.com',
+      subject: `🚨 URGENT: Critical Child Safety Case #${case_.id} - ${case_.caseType?.toUpperCase()}`,
+      text: emailContent,
+      priority: 'high'
     });
 
-  const aiCharacteristics = case_.aiCharacteristics 
-    ? JSON.parse(case_.aiCharacteristics)
-    : null;
-
-  const emailContent = `
-    ⚠️ URGENT: Critical Child Safety Case Report ⚠️
-    
-    IMMEDIATE ACTION REQUIRED
-    
-    Case Details:
-    =============
-    Case ID: #${case_.id}
-    Type: ${case_.caseType.toUpperCase()}
-    Child's Name: ${case_.childName}
-    Age: ${case_.age}
-    Location: ${case_.location}
-    Status: ${case_.status.toUpperCase()}
-    Reported: ${new Date(case_.createdAt).toLocaleString()}
-
-    Detailed Description:
-    ====================
-    ${case_.description}
-
-    Contact Information:
-    ===================
-    ${case_.contactInfo}
-
-    ${aiCharacteristics ? `
-    AI Analysis:
-    ===========
-    ${Object.entries(aiCharacteristics)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('\n')}
-    ` : ''}
-
-    Priority Emergency Contacts:
-    ==========================
-    ${relevantContacts.map(contact => 
-      `${contact.service.toUpperCase()} - ${contact.name}
-       📞 ${contact.phone}
-       Priority: ${contact.priority.toUpperCase()}
-       Role: ${contact.description}
-      `
-    ).join('\n\n')}
-
-    Additional Support Services:
-    ==========================
-    ${emergencyContacts
-      .filter(contact => !priorityServices.includes(contact.service))
-      .map(contact => `${contact.service}: ${contact.phone}`)
-      .join('\n')}
-
-    Action Items:
-    ============
-    1. Contact primary emergency services immediately
-    2. Document all communications and responses
-    3. Follow up within 1 hour to ensure action has been taken
-    4. Coordinate with local authorities if needed
-
-    REMINDER: This is a time-sensitive case requiring immediate attention.
-    Document all actions taken and maintain strict confidentiality.
-  `;
-
-  await transporter.sendMail({
-    from: 'k1r03478.null@gmail.com',
-    to: 'k1r03478.null@gmail.com',
-    subject: `🚨 URGENT: Critical Child Safety Case #${case_.id} - ${case_.caseType.toUpperCase()}`,
-    text: emailContent,
-    priority: 'high'
-  });
+    console.log(`Email alert sent successfully for case #${case_.id}`);
+  } catch (error) {
+    console.error('Failed to send email alert:', error);
+    // Don't throw the error, just log it
+    // This allows the case creation to continue even if email fails
+  }
 }
 
 function generateEmergencyContactsMessage(case_: Case): string {
