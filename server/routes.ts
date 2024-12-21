@@ -5,6 +5,7 @@ import { cases, users } from "@db/schema";
 import { eq } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { initializeNotificationService } from "./services/notifications";
 
@@ -16,7 +17,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ 
-  storage: storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|mp4|mov|avi/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -25,6 +26,14 @@ const upload = multer({
       return cb(null, true);
     }
     cb(new Error("Only images and videos are allowed!"));
+  }
+});
+
+// Middleware to handle disk storage after AI processing
+const diskStorage = multer.diskStorage({
+  destination: "./uploads",
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
 
@@ -41,24 +50,30 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/cases", upload.array("files"), async (req, res) => {
     try {
-      const { childName, age, location, description, contactInfo } = req.body;
+      const { childName, age, location, description, contactInfo, caseType } = req.body;
       const files = req.files as Express.Multer.File[];
       
-      if (!childName || !age || !location || !description || !contactInfo) {
+      if (!childName || !age || !location || !description || !contactInfo || !caseType) {
         return res.status(400).send("All fields are required");
       }
 
       // Get the first image file to use as the main image
       const imageFile = files?.find(file => file.mimetype.startsWith('image/'));
-      const imageUrl = imageFile ? `/uploads/${imageFile.filename}` : undefined;
+      let imageUrl;
+      let aiCharacteristics;
       
-      let aiCharacteristics = undefined;
       if (imageFile) {
         try {
+          // Process with AI first
           const analysis = await getImageDescription(imageFile.buffer);
           aiCharacteristics = JSON.stringify(analysis.characteristics);
+          
+          // Save to disk after AI processing
+          const filename = `${Date.now()}-${imageFile.originalname}`;
+          await fs.promises.writeFile(`./uploads/${filename}`, imageFile.buffer);
+          imageUrl = `/uploads/${filename}`;
         } catch (error) {
-          console.error("Error analyzing image:", error);
+          console.error("Error processing image:", error);
         }
       }
 

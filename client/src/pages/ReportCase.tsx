@@ -6,6 +6,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useRef, useState } from 'react';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Form,
   FormControl,
   FormField,
@@ -25,6 +32,9 @@ const reportCaseSchema = z.object({
   location: z.string().min(1, "Location is required"),
   description: z.string().min(10, "Please provide more details"),
   contactInfo: z.string().min(1, "Contact information is required"),
+  caseType: z.enum(["child_missing", "child_labour", "child_harassment"], {
+    required_error: "Please select a case type",
+  }),
 });
 
 type ReportCaseForm = z.infer<typeof reportCaseSchema>;
@@ -44,6 +54,7 @@ export default function ReportCase() {
       location: "",
       description: "",
       contactInfo: "",
+      caseType: "child_missing",
     },
   });
 
@@ -167,6 +178,27 @@ export default function ReportCase() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="caseType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Case Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select case type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="child_missing">Missing Child</SelectItem>
+                          <SelectItem value="child_labour">Child Labour</SelectItem>
+                          <SelectItem value="child_harassment">Child Harassment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <FormField
                   control={form.control}
                   name="contactInfo"

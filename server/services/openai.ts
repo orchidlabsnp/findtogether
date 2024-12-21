@@ -7,7 +7,7 @@ if (!process.env.OPENAI_API_KEY) {
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export async function getImageDescription(imageBuffer: Buffer): Promise<{
+export async function getImageDescription(imageBuffer: Buffer | undefined): Promise<{
   description: string;
   characteristics: {
     age: number;
@@ -21,6 +21,10 @@ export async function getImageDescription(imageBuffer: Buffer): Promise<{
   };
 }> {
   try {
+    if (!imageBuffer) {
+      throw new Error("No image buffer provided");
+    }
+
     const base64Image = imageBuffer.toString('base64');
 
     const response = await openai.chat.completions.create({
@@ -59,7 +63,20 @@ export async function getImageDescription(imageBuffer: Buffer): Promise<{
       max_tokens: 500,
     });
 
-    return JSON.parse(response.choices[0].message.content || "{}");
+    const parsedResponse = JSON.parse(response.choices[0].message.content || "{}");
+    return {
+      description: parsedResponse.description || "",
+      characteristics: {
+        age: Number(parsedResponse.characteristics?.age) || 0,
+        gender: parsedResponse.characteristics?.gender || "",
+        hairColor: parsedResponse.characteristics?.hairColor || "",
+        eyeColor: parsedResponse.characteristics?.eyeColor || "",
+        distinguishingFeatures: parsedResponse.characteristics?.distinguishingFeatures || [],
+        height: parsedResponse.characteristics?.height || "",
+        buildType: parsedResponse.characteristics?.buildType || "",
+        clothing: parsedResponse.characteristics?.clothing || [],
+      }
+    };
   } catch (error) {
     console.error('Error getting image description:', error);
     throw error;
