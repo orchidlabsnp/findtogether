@@ -48,6 +48,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/safety-game">
+                  <a className="text-gray-400 hover:text-white transition-colors">
+                    Safety Learning Game
+                  </a>
+                </Link>
+              </li>
+              <li>
                 <a href="#" className="text-gray-400 hover:text-white transition-colors">
                   Join Community
                 </a>
