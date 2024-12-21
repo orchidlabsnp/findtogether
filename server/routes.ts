@@ -8,7 +8,7 @@ import path from "path";
 import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { initializeNotificationService } from "./services/notifications";
-import { analyzeAndNotify } from "./services/reportAnalysis";
+// Safety alert system removed
 import { uploadToIPFS } from "./services/ipfs";
 import { createBlockchainReport } from "./services/blockchain";
 
@@ -164,32 +164,18 @@ export function registerRoutes(app: Express): Server {
             networkExplorer: `https://sepolia.etherscan.io/tx/${blockchainResult.transactionHash}`
           };
 
-          // Analyze case and trigger emergency notifications
-          try {
-            const analysisResult = await analyzeAndNotify(newCase);
-            console.log('Emergency protocols activated:', analysisResult);
-
-            res.json({
-              case: newCase,
-              analysis: analysisResult,
-              blockchain: blockchainDetails,
-              ipfsHash,
-              message: 'CRITICAL CASE: Emergency services notified.',
-              steps: [
-                { step: 'Case Creation', status: 'completed' },
-                { step: 'Blockchain Storage', status: 'completed', details: blockchainDetails },
-                { step: 'IPFS Storage', status: ipfsHash ? 'completed' : 'skipped' },
-                { step: 'Emergency Notification', status: 'completed' }
-              ]
-            });
-          } catch (notificationError) {
-            console.error("Error in notification system:", notificationError);
-            res.status(500).json({
-              case: newCase,
-              error: 'Emergency notification system failure',
-              message: 'Case created but failed to notify emergency services'
-            });
-          }
+          // Return simplified response without safety alerts
+          res.json({
+            case: newCase,
+            blockchain: blockchainDetails,
+            ipfsHash,
+            message: 'Case created successfully',
+            steps: [
+              { step: 'Case Creation', status: 'completed' },
+              { step: 'Blockchain Storage', status: 'completed', details: blockchainDetails },
+              { step: 'IPFS Storage', status: ipfsHash ? 'completed' : 'skipped' }
+            ]
+          });
         } catch (blockchainError) {
           console.error('Blockchain storage error:', blockchainError);
           res.status(500).json({
