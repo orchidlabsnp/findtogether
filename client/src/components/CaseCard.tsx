@@ -73,7 +73,12 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Badge variant="outline" className="capitalize">
-                {case_.caseType?.replace('_', ' ') || 'Not specified'}
+                {case_.caseType ? 
+                  case_.caseType.split('_').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                  ).join(' ') 
+                  : 'Child Missing'
+                }
               </Badge>
             </div>
             <p className="text-sm text-gray-600 line-clamp-2">
