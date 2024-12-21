@@ -319,8 +319,26 @@ export async function createBlockchainReport(
   description: string,
   contactInfo: string,
   aiCharacteristics: string
-): Promise<number> {
+): Promise<{ reportId: number; transactionHash: string; status: string }> {
+  console.log('Initiating blockchain report creation...');
+  
   try {
+    // Estimate gas first to ensure transaction will succeed
+    const gasEstimate = await contract.methods
+      .createReport(
+        caseType,
+        childName,
+        age,
+        location,
+        description,
+        contactInfo,
+        aiCharacteristics
+      )
+      .estimateGas({ from: account.address });
+
+    console.log('Gas estimation successful, proceeding with transaction...');
+
+    // Send the transaction with the estimated gas
     const result = await contract.methods
       .createReport(
         caseType,
@@ -331,14 +349,41 @@ export async function createBlockchainReport(
         contactInfo,
         aiCharacteristics
       )
-      .send({ from: account.address });
+      .send({ 
+        from: account.address,
+        gas: Math.floor(gasEstimate * 1.2) // Add 20% buffer for safety
+      });
 
     const reportId = Number(result.events.ReportCreated.returnValues.reportId);
-    console.log('Report created on blockchain with ID:', reportId);
-    return reportId;
-  } catch (error) {
+    console.log('Report successfully created on blockchain:', {
+      reportId,
+      transactionHash: result.transactionHash,
+      blockNumber: result.blockNumber,
+      gasUsed: result.gasUsed
+    });
+
+    return {
+      reportId,
+      transactionHash: result.transactionHash,
+      status: 'success'
+    };
+  } catch (error: any) {
     console.error('Blockchain report creation error:', error);
-    throw new Error('Failed to create report on blockchain');
+    
+    // Provide more detailed error information
+    const errorDetails = {
+      message: error.message,
+      code: error.code,
+      reason: error.reason || 'Unknown error'
+    };
+    
+    console.error('Error details:', errorDetails);
+    
+    throw {
+      error: 'Failed to create report on blockchain',
+      details: errorDetails,
+      status: 'failed'
+    };
   }
 }
 

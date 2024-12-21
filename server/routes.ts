@@ -114,9 +114,11 @@ export function registerRoutes(app: Express): Server {
       if (isCriticalCase) {
         console.log(`Critical case detected: ${caseType}. Initiating emergency protocols...`);
 
-        // Store in blockchain
+        // Store in blockchain with enhanced status tracking
         try {
-          const blockchainReportId = await createBlockchainReport(
+          console.log('Initiating blockchain storage for case:', newCase.id);
+          
+          const blockchainResult = await createBlockchainReport(
             caseType,
             childName,
             parseInt(age),
@@ -125,16 +127,30 @@ export function registerRoutes(app: Express): Server {
             contactInfo,
             aiCharacteristics || ''
           );
-          console.log('Case stored in blockchain with ID:', blockchainReportId);
+          
+          console.log('Blockchain transaction completed:', {
+            caseId: newCase.id,
+            blockchainId: blockchainResult.reportId,
+            transactionHash: blockchainResult.transactionHash,
+            status: blockchainResult.status
+          });
 
-          // Update case status to active after blockchain storage
+          // Update case status to active after successful blockchain storage
           await db
             .update(cases)
             .set({ 
               status: 'active',
-              matchConfidence: '100' // Set high confidence for blockchain-verified cases
+              matchConfidence: '100', // Set high confidence for blockchain-verified cases
             })
             .where(eq(cases.id, newCase.id));
+          
+          // Add detailed blockchain information to the response
+          const blockchainDetails = {
+            reportId: blockchainResult.reportId,
+            transactionHash: blockchainResult.transactionHash,
+            status: blockchainResult.status,
+            networkExplorer: `https://sepolia.etherscan.io/tx/${blockchainResult.transactionHash}`
+          };
 
           // Analyze case and trigger emergency notifications
           try {
@@ -144,9 +160,15 @@ export function registerRoutes(app: Express): Server {
             res.json({
               case: newCase,
               analysis: analysisResult,
-              blockchainId: blockchainReportId,
+              blockchain: blockchainDetails,
               ipfsHash,
-              message: 'CRITICAL CASE: Emergency services notified.'
+              message: 'CRITICAL CASE: Emergency services notified.',
+              steps: [
+                { step: 'Case Creation', status: 'completed' },
+                { step: 'Blockchain Storage', status: 'completed', details: blockchainDetails },
+                { step: 'IPFS Storage', status: ipfsHash ? 'completed' : 'skipped' },
+                { step: 'Emergency Notification', status: 'completed' }
+              ]
             });
           } catch (notificationError) {
             console.error("Error in notification system:", notificationError);
