@@ -79,42 +79,162 @@ const emergencyContacts: EmergencyContact[] = [
     description: '24/7 crisis support via text message'
   }
 ];
+interface RiskAssessment {
+  level: 'EXTREME' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severity: string;
+  urgency: string;
+  responseType: string;
+  recommendations: string[];
+}
+
+function calculateRiskLevel(case_: Case, aiAnalysis: any | null): RiskAssessment {
+  // Default to high risk for these case types
+  const baseRisk: RiskAssessment = {
+    level: 'HIGH',
+    severity: 'Critical',
+    urgency: 'Immediate Response Required',
+    responseType: 'Emergency Intervention',
+    recommendations: []
+  };
+
+  // Elevate risk based on case type
+  if (case_.caseType === 'child_labour') {
+    baseRisk.recommendations = [
+      'Contact Department of Labor immediately',
+      'Notify local law enforcement for site inspection',
+      'Document workplace conditions and evidence',
+      'Coordinate with child protective services',
+      'Arrange immediate removal from dangerous conditions'
+    ];
+  } else if (case_.caseType === 'child_harassment') {
+    baseRisk.recommendations = [
+      'Immediate police notification required',
+      'Activate child protection response team',
+      'Secure safe environment for the child',
+      'Document all reported incidents',
+      'Arrange emergency counseling support'
+    ];
+  }
+
+  // Adjust risk level based on AI analysis if available
+  if (aiAnalysis) {
+    // Elevate to EXTREME if AI detects severe conditions
+    if (
+      aiAnalysis.dangerLevel === 'high' ||
+      aiAnalysis.immediateRisk === true ||
+      aiAnalysis.threatLevel === 'severe'
+    ) {
+      baseRisk.level = 'EXTREME';
+      baseRisk.severity = 'Critical - Immediate Danger';
+      baseRisk.urgency = 'Emergency Response Required';
+      baseRisk.recommendations.unshift('IMMEDIATE RESCUE OPERATION REQUIRED');
+    }
+
+    // Add AI-specific recommendations
+    if (aiAnalysis.recommendations) {
+      baseRisk.recommendations = [
+        ...baseRisk.recommendations,
+        ...aiAnalysis.recommendations
+      ];
+    }
+  }
+
+  // Add age-based recommendations
+  if (case_.age < 12) {
+    baseRisk.level = 'EXTREME';
+    baseRisk.recommendations.push(
+      'Special child trauma counselor required',
+      'Coordinate with pediatric care services'
+    );
+  }
+
+  return baseRisk;
+}
+
 
 export async function analyzeAndNotify(case_: Case) {
   const notificationService = getNotificationService();
+  // Determine if the case is critical based on type and AI analysis
   const isCritical = case_.caseType === 'child_labour' || case_.caseType === 'child_harassment';
-
+  
+  // Enhanced analysis for critical cases
   if (isCritical) {
-    // Send immediate email notification
-    await sendEmailAlert(case_);
-    
-    // Send emergency notifications
-    notificationService.broadcastSafetyAlert(
-      'Critical Case Alert',
-      `Urgent attention needed for case #${case_.id}. Type: ${case_.caseType}`,
-      'critical',
-      case_.location
-    );
+    try {
+      // Parse AI characteristics if available
+      const aiAnalysis = case_.aiCharacteristics ? JSON.parse(case_.aiCharacteristics) : null;
+      
+      // Calculate risk level based on case type and AI analysis
+      const riskLevel = calculateRiskLevel(case_, aiAnalysis);
+      
+      // Send immediate email notification with enhanced details
+      await sendEmailAlert(case_);
+      
+      // Send emergency notifications with detailed analysis
+      notificationService.broadcastSafetyAlert(
+        '🚨 CRITICAL SAFETY ALERT 🚨',
+        `IMMEDIATE ACTION REQUIRED: Case #${case_.id}
+         Type: ${case_.caseType.toUpperCase()}
+         Location: ${case_.location}
+         Age: ${case_.age}
+         Risk Level: ${riskLevel.level}
+         
+         Analysis Summary:
+         - Severity: ${riskLevel.severity}
+         - Urgency: ${riskLevel.urgency}
+         - Required Response: ${riskLevel.responseType}
+         
+         ${riskLevel.recommendations.join('\n')}
+         
+         Emergency services have been notified and are being dispatched.`,
+        'critical',
+        case_.location
+      );
 
-    // Notify about emergency services
-    const emergencyMessage = generateEmergencyContactsMessage(case_);
-    notificationService.broadcastSafetyAlert(
-      'Emergency Services Notification',
-      emergencyMessage,
-      'critical',
-      case_.location
-    );
+      // Send detailed emergency services notification
+      const emergencyMessage = generateEmergencyContactsMessage(case_);
+      notificationService.broadcastSafetyAlert(
+        'Emergency Response Required',
+        emergencyMessage,
+        'critical',
+        case_.location
+      );
 
-    return {
-      status: 'critical',
-      message: 'Emergency services notified and email sent.',
-      emergencyContacts
-    };
+      // Send case update notification
+      notificationService.broadcastCaseUpdate(
+        case_.id,
+        'URGENT_RESPONSE_REQUIRED',
+        `Case escalated to emergency services. Priority response required.
+         Type: ${case_.caseType}
+         Location: ${case_.location}
+         Status: Active Emergency Response`
+      );
+
+      return {
+        status: 'critical',
+        severity: 'high',
+        message: 'Emergency protocols activated. Services notified.',
+        aiAnalysis: case_.aiCharacteristics ? JSON.parse(case_.aiCharacteristics) : null,
+        responseActions: [
+          'Emergency services notified',
+          'Email alert sent',
+          'Case escalated to high priority',
+          'Real-time monitoring activated'
+        ],
+        emergencyContacts: emergencyContacts.filter(contact => 
+          ['Police', 'CPS', case_.caseType === 'child_labour' ? 'Labor' : 'Support']
+          .includes(contact.service)
+        )
+      };
+    } catch (error) {
+      console.error('Error in emergency notification process:', error);
+      throw new Error('Failed to process emergency notifications');
+    }
   }
 
   return {
     status: 'normal',
-    message: 'Case logged successfully.'
+    message: 'Case logged successfully.',
+    severity: 'standard'
   };
 }
 
