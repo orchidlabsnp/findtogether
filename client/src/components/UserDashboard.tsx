@@ -87,10 +87,10 @@ export default function UserDashboard({ address }: UserDashboardProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <Card className="shadow-sm">
-          <CardHeader className="p-3">
-            <CardTitle className="text-sm font-bold flex items-center gap-1">
-              <Bell className="h-4 w-4 text-primary" />
+        <Card className="shadow-sm max-w-xs mx-auto">
+          <CardHeader className="p-2">
+            <CardTitle className="text-xs font-bold flex items-center gap-1">
+              <Bell className="h-3 w-3 text-primary" />
               Your Reported Cases
             </CardTitle>
           </CardHeader>
@@ -101,10 +101,10 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-center py-4 bg-gray-50 rounded-lg"
+                  className="text-center py-2 bg-gray-50 rounded"
                 >
                   <div className="flex flex-col items-center gap-1">
-                    <AlertCircle className="h-8 w-8 text-gray-400" />
+                    <AlertCircle className="h-6 w-6 text-gray-400" />
                     <p className="text-xs text-gray-600 font-medium">No cases reported yet</p>
                     <p className="text-xs text-gray-500">
                       Your reported cases will appear here
@@ -121,9 +121,9 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ delay: index * 0.1 }}
                     >
-                      <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200">
-                        <CardContent className="p-3">
-                          <div className="flex flex-col space-y-2">
+                      <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200 max-w-xs mx-auto">
+                        <CardContent className="p-2">
+                          <div className="flex flex-col space-y-1.5">
                             {/* Header with Case ID and Status */}
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-1">
@@ -132,7 +132,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                               </div>
                               <Badge 
                                 variant="outline"
-                                className={`flex items-center gap-1 px-2 py-0.5 text-xs ${getStatusColor(case_.status)}`}
+                                className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] ${getStatusColor(case_.status)}`}
                               >
                                 {getStatusIcon(case_.status)}
                                 <span className="font-medium">{case_.status?.toUpperCase()}</span>
@@ -143,35 +143,35 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                             <div className="flex flex-wrap gap-2">
                               <div className="flex items-center gap-1">
                                 <Tag className="h-3 w-3 text-gray-600" />
-                                <span className="text-xs">{getCaseTypeLabel(case_.caseType)}</span>
+                                <span className="text-[10px]">{getCaseTypeLabel(case_.caseType)}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Clock className="h-3 w-3 text-gray-600" />
-                                <span className="text-xs">Age: {case_.age}</span>
+                                <span className="text-[10px]">Age: {case_.age}</span>
                               </div>
                             </div>
 
                             {/* Location */}
                             <div className="flex items-start gap-1">
                               <MapPin className="h-3 w-3 text-gray-600 mt-0.5 flex-shrink-0" />
-                              <span className="text-xs text-gray-600">{case_.location}</span>
+                              <span className="text-[10px] text-gray-600">{case_.location}</span>
                             </div>
 
                             {/* Description */}
-                            <div className="bg-gray-50 rounded p-2">
-                              <p className="text-xs text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+                            <div className="bg-gray-50 rounded p-1.5">
+                              <p className="text-[10px] text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
                                 {case_.description}
                               </p>
                             </div>
 
                             {/* Contact Info */}
-                            <div className="text-xs text-gray-600 bg-blue-50 rounded p-2">
+                            <div className="text-[10px] text-gray-600 bg-blue-50 rounded p-1.5">
                               <strong>Contact:</strong> {case_.contactInfo}
                             </div>
 
                             {/* Timestamps */}
                             {case_.createdAt && (
-                              <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                              <div className="flex flex-wrap gap-1.5 text-[10px] text-gray-500">
                                 <div className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
                                   <span>Created: {format(new Date(case_.createdAt), 'Pp')}</span>
@@ -187,11 +187,11 @@ export default function UserDashboard({ address }: UserDashboardProps) {
 
                             {/* Case Image */}
                             {case_.imageUrl && (
-                              <div className="mt-2">
+                              <div className="mt-1.5">
                                 <img 
                                   src={case_.imageUrl} 
                                   alt={`Case ${case_.id} - ${case_.childName}`}
-                                  className="rounded w-full h-32 object-cover shadow-sm"
+                                  className="rounded w-full h-20 object-cover shadow-sm"
                                 />
                               </div>
                             )}
