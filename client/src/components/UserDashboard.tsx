@@ -3,7 +3,7 @@ import { Case } from "@db/schema";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Calendar, MapPin, Loader2, Tag } from "lucide-react";
+import { Bell, Calendar, MapPin, Loader2, Tag, Clock, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { format } from "date-fns";
 
 interface UserDashboardProps {
@@ -35,6 +35,19 @@ export default function UserDashboard({ address }: UserDashboardProps) {
     }
   };
 
+  const getStatusIcon = (status: string | null) => {
+    switch (status?.toLowerCase()) {
+      case 'open':
+        return <AlertCircle className="h-4 w-4 text-red-600" />;
+      case 'investigating':
+        return <Search className="h-4 w-4 text-yellow-600" />;
+      case 'resolved':
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
   const getCaseTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       'child_missing': 'Missing Child',
@@ -59,23 +72,32 @@ export default function UserDashboard({ address }: UserDashboardProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Your Reported Cases</CardTitle>
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              Your Reported Cases
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <AnimatePresence mode="wait">
               {!userCases?.length ? (
-                <motion.p
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-sm text-gray-500 text-center py-4"
+                  className="text-center py-8 bg-gray-50 rounded-lg"
                 >
-                  You haven't reported any cases yet.
-                </motion.p>
+                  <div className="flex flex-col items-center gap-2">
+                    <AlertCircle className="h-12 w-12 text-gray-400" />
+                    <p className="text-gray-600 font-medium">No cases reported yet</p>
+                    <p className="text-sm text-gray-500">
+                      Your reported cases will appear here
+                    </p>
+                  </div>
+                </motion.div>
               ) : (
-                <div className="grid gap-4">
+                <div className="grid gap-6">
                   {userCases.map((case_, index) => (
                     <motion.div
                       key={case_.id}
@@ -83,52 +105,80 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ delay: index * 0.1 }}
-                      className="border rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <h3 className="font-semibold text-base sm:text-lg truncate">Case #{case_.id}: {case_.childName}</h3>
-                          <p className="text-sm text-gray-600 truncate">Location: {case_.location}</p>
-                          <p className="text-sm text-gray-600">Type: {getCaseTypeLabel(case_.caseType)}</p>
-                        </div>
-                        <Badge 
-                          variant="outline"
-                          className={`${getStatusColor(case_.status)}`}
-                        >
-                          {case_.status?.toUpperCase() || 'PENDING'}
-                        </Badge>
-                      </div>
+                      <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
+                        <CardContent className="p-6">
+                          <div className="flex flex-col space-y-4">
+                            {/* Header with Case ID and Status */}
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm text-gray-500">#{case_.id}</span>
+                                <h3 className="text-lg font-semibold text-gray-900">{case_.childName}</h3>
+                              </div>
+                              <Badge 
+                                variant="outline"
+                                className={`flex items-center gap-1 px-3 py-1 ${getStatusColor(case_.status)}`}
+                              >
+                                {getStatusIcon(case_.status)}
+                                <span className="font-medium">{case_.status?.toUpperCase()}</span>
+                              </Badge>
+                            </div>
 
-                      <div className="mt-2 sm:mt-4">
-                        <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer">
-                          {case_.description}
-                        </p>
-                      </div>
+                            {/* Case Type and Age */}
+                            <div className="flex flex-wrap gap-4">
+                              <div className="flex items-center gap-2">
+                                <Tag className="h-4 w-4 text-gray-600" />
+                                <span className="text-sm font-medium">{getCaseTypeLabel(case_.caseType)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-gray-600" />
+                                <span className="text-sm">Age: {case_.age} years</span>
+                              </div>
+                            </div>
 
-                      <div className="mt-4 space-y-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 flex-shrink-0" />
-                          <span>
-                            {case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}
-                          </span>
-                        </div>
-                        {case_.status === 'investigating' && (
-                          <div className="flex items-center gap-2 text-yellow-600">
-                            <Bell className="h-4 w-4 flex-shrink-0" />
-                            <span>Case is under active investigation</span>
+                            {/* Location */}
+                            <div className="flex items-start gap-2">
+                              <MapPin className="h-4 w-4 text-gray-600 mt-1 flex-shrink-0" />
+                              <span className="text-sm text-gray-600">{case_.location}</span>
+                            </div>
+
+                            {/* Description */}
+                            <div className="bg-gray-50 rounded-lg p-4">
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+                                {case_.description}
+                              </p>
+                            </div>
+
+                            {/* Contact Info */}
+                            <div className="text-sm text-gray-600 bg-blue-50 rounded-lg p-4">
+                              <strong>Contact Information:</strong> {case_.contactInfo}
+                            </div>
+
+                            {/* Timestamps */}
+                            <div className="flex flex-wrap gap-4 text-sm text-gray-500 pt-2">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span>Created: {format(new Date(case_.createdAt), 'PPp')}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                <span>Last Updated: {format(new Date(case_.updatedAt), 'PPp')}</span>
+                              </div>
+                            </div>
+
+                            {/* Case Image */}
+                            {case_.imageUrl && (
+                              <div className="mt-4">
+                                <img 
+                                  src={case_.imageUrl} 
+                                  alt={`Case ${case_.id} - ${case_.childName}`}
+                                  className="rounded-lg w-full max-w-md object-cover shadow-sm"
+                                />
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-
-                      {case_.imageUrl && (
-                        <div className="mt-4">
-                          <img 
-                            src={case_.imageUrl} 
-                            alt={`Case ${case_.id}`}
-                            className="rounded-md w-full max-w-xs object-cover"
-                          />
-                        </div>
-                      )}
+                        </CardContent>
+                      </Card>
                     </motion.div>
                   ))}
                 </div>
