@@ -141,7 +141,7 @@ export default function Admin() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="space-y-6 sm:space-y-8 mt-5"
+          className="space-y-6 sm:space-y-8"
         >
           <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
 
@@ -153,7 +153,7 @@ export default function Admin() {
             <div className="grid gap-6 sm:gap-8">
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold">Active & Pending Cases</CardTitle>
+                  <CardTitle className="text-xl font-bold">Active Cases</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <AnimatePresence mode="wait">
