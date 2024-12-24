@@ -16,10 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2 } from "lucide-react";
-
+import { Loader2, MapPin, Tag, Clock, Calendar } from "lucide-react";
+import { format } from "date-fns";
 
 const ADMIN_ADDRESS = "0x5A498a4520b56Fe0119Bd3D8D032D53c65c035a7";
 
@@ -73,6 +73,28 @@ export default function Admin() {
     refetchOnWindowFocus: true,
   });
 
+  const getStatusColor = (status: string | null) => {
+    switch (status?.toLowerCase()) {
+      case 'open':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'investigating':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'resolved':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getCaseTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'child_missing': 'Missing Child',
+      'child_labour': 'Child Labour',
+      'child_harassment': 'Child Harassment'
+    };
+    return labels[type] || type;
+  };
+
   const handleStatusUpdate = async (caseId: number, newStatus: string) => {
     setIsUpdating(true);
     setUpdatingCaseId(caseId);
@@ -121,130 +143,216 @@ export default function Admin() {
           transition={{ duration: 0.3 }}
           className="space-y-4 sm:space-y-6 w-full"
         >
-          <h1 className="text-2xl sm:text-3xl font-bold px-2">Admin Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold px-2 mt-5">Admin Dashboard</h1>
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="grid gap-4 sm:gap-6 w-full">
-              <Card className="w-full overflow-hidden">
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-xl sm:text-2xl">Pending Cases</CardTitle>
+            <div className="grid gap-4 sm:gap-6">
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold">Active Cases</CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-x-auto">
+                <CardContent>
                   <AnimatePresence mode="wait">
-                    {cases?.filter((c: Case) => c.status === 'open' || c.status === 'investigating').map((case_: Case) => (
-                      <motion.div 
-                        key={case_.id} 
-                        className="border-b py-4 last:border-0"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4 px-2">
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <h3 className="font-semibold text-base sm:text-lg truncate">Case #{case_.id}: {case_.childName}</h3>
-                            <p className="text-sm text-gray-600 truncate">Location: {case_.location}</p>
-                            <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
-                          </div>
-                          <Select
-                            value={case_.status || undefined}
-                            onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                            disabled={isUpdating && updatingCaseId === case_.id}
-                          >
-                            <SelectTrigger className="w-full sm:w-32 shrink-0">
-                              {isUpdating && updatingCaseId === case_.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <SelectValue placeholder="Status" />
-                              )}
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="open">Open</SelectItem>
-                              <SelectItem value="investigating">Investigating</SelectItem>
-                              <SelectItem value="resolved">Resolved</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="mt-2 sm:mt-4 px-2">
-                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer max-w-full">
-                            {case_.description}
-                          </p>
-                          <button 
-                            className="text-xs text-primary mt-1 hover:underline focus:outline-none sm:hidden"
-                            onClick={(e) => {
-                              const target = e.currentTarget.previousElementSibling as HTMLParagraphElement;
-                              target.classList.toggle('line-clamp-3');
-                            }}
-                          >
-                            Read {case_.description && case_.description.length > 150 ? 'more' : 'less'}
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
+                    <div className="grid gap-4">
+                      {cases?.filter(c => c.status === 'open' || c.status === 'investigating').map((case_, index) => (
+                        <motion.div
+                          key={case_.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ delay: index * 0.1 }}
+                        >
+                          <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200 max-w-xl">
+                            <CardContent className="p-2">
+                              <div className="flex flex-col space-y-1.5">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-mono text-xs text-gray-500">#{case_.id}</span>
+                                    <h3 className="text-xs font-semibold text-gray-900">{case_.childName}</h3>
+                                  </div>
+                                  <Select
+                                    value={case_.status || undefined}
+                                    onValueChange={(value) => handleStatusUpdate(case_.id, value)}
+                                    disabled={isUpdating && updatingCaseId === case_.id}
+                                  >
+                                    <SelectTrigger className={`w-24 h-6 text-xs ${getStatusColor(case_.status)}`}>
+                                      {isUpdating && updatingCaseId === case_.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <SelectValue placeholder="Status" />
+                                      )}
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="open">Open</SelectItem>
+                                      <SelectItem value="investigating">Investigating</SelectItem>
+                                      <SelectItem value="resolved">Resolved</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                  <div className="flex items-center gap-1">
+                                    <Tag className="h-3 w-3 text-gray-600" />
+                                    <span className="text-[10px]">{getCaseTypeLabel(case_.caseType)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3 text-gray-600" />
+                                    <span className="text-[10px]">Age: {case_.age}</span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-start gap-1">
+                                  <MapPin className="h-3 w-3 text-gray-600 mt-0.5 flex-shrink-0" />
+                                  <span className="text-[10px] text-gray-600">{case_.location}</span>
+                                </div>
+
+                                <div className="bg-gray-50 rounded p-1.5">
+                                  <p className="text-[10px] text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+                                    {case_.description}
+                                  </p>
+                                </div>
+
+                                <div className="text-[10px] text-gray-600 bg-blue-50 rounded p-1.5">
+                                  <strong>Contact:</strong> {case_.contactInfo}
+                                </div>
+
+                                {case_.createdAt && (
+                                  <div className="flex flex-wrap gap-1.5 text-[10px] text-gray-500">
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      <span>Created: {format(new Date(case_.createdAt), 'Pp')}</span>
+                                    </div>
+                                    {case_.updatedAt && (
+                                      <div className="flex items-center gap-1">
+                                        <Clock className="h-3 w-3" />
+                                        <span>Updated: {format(new Date(case_.updatedAt), 'Pp')}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {case_.imageUrl && (
+                                  <div className="mt-1.5">
+                                    <img 
+                                      src={case_.imageUrl} 
+                                      alt={`Case ${case_.id} - ${case_.childName}`}
+                                      className="rounded w-full h-20 object-cover shadow-sm"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
                   </AnimatePresence>
                 </CardContent>
               </Card>
 
-              <Card className="w-full overflow-hidden">
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-xl sm:text-2xl">Resolved Cases</CardTitle>
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold">Resolved Cases</CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-x-auto">
+                <CardContent>
                   <AnimatePresence mode="wait">
-                    {cases?.filter((c: Case) => c.status === 'resolved').map((case_: Case) => (
-                      <motion.div 
-                        key={case_.id} 
-                        className="border-b py-4 last:border-0"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4 px-2">
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <h3 className="font-semibold text-base sm:text-lg truncate">Case #{case_.id}: {case_.childName}</h3>
-                            <p className="text-sm text-gray-600 truncate">Location: {case_.location}</p>
-                            <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
-                          </div>
-                          <Select
-                            value={case_.status || undefined}
-                            onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                            disabled={isUpdating && updatingCaseId === case_.id}
-                          >
-                            <SelectTrigger className="w-full sm:w-32 shrink-0">
-                              {isUpdating && updatingCaseId === case_.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <SelectValue placeholder="Status" />
-                              )}
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="open">Open</SelectItem>
-                              <SelectItem value="investigating">Investigating</SelectItem>
-                              <SelectItem value="resolved">Resolved</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="mt-2 sm:mt-4 px-2">
-                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer max-w-full">
-                            {case_.description}
-                          </p>
-                          <button 
-                            className="text-xs text-primary mt-1 hover:underline focus:outline-none sm:hidden"
-                            onClick={(e) => {
-                              const target = e.currentTarget.previousElementSibling as HTMLParagraphElement;
-                              target.classList.toggle('line-clamp-3');
-                            }}
-                          >
-                            Read {case_.description && case_.description.length > 150 ? 'more' : 'less'}
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
+                    <div className="grid gap-4">
+                      {cases?.filter(c => c.status === 'resolved').map((case_, index) => (
+                        <motion.div
+                          key={case_.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ delay: index * 0.1 }}
+                        >
+                          <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200 max-w-xl">
+                            <CardContent className="p-2">
+                              <div className="flex flex-col space-y-1.5">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-mono text-xs text-gray-500">#{case_.id}</span>
+                                    <h3 className="text-xs font-semibold text-gray-900">{case_.childName}</h3>
+                                  </div>
+                                  <Select
+                                    value={case_.status || undefined}
+                                    onValueChange={(value) => handleStatusUpdate(case_.id, value)}
+                                    disabled={isUpdating && updatingCaseId === case_.id}
+                                  >
+                                    <SelectTrigger className={`w-24 h-6 text-xs ${getStatusColor(case_.status)}`}>
+                                      {isUpdating && updatingCaseId === case_.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <SelectValue placeholder="Status" />
+                                      )}
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="open">Open</SelectItem>
+                                      <SelectItem value="investigating">Investigating</SelectItem>
+                                      <SelectItem value="resolved">Resolved</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                  <div className="flex items-center gap-1">
+                                    <Tag className="h-3 w-3 text-gray-600" />
+                                    <span className="text-[10px]">{getCaseTypeLabel(case_.caseType)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3 text-gray-600" />
+                                    <span className="text-[10px]">Age: {case_.age}</span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-start gap-1">
+                                  <MapPin className="h-3 w-3 text-gray-600 mt-0.5 flex-shrink-0" />
+                                  <span className="text-[10px] text-gray-600">{case_.location}</span>
+                                </div>
+
+                                <div className="bg-gray-50 rounded p-1.5">
+                                  <p className="text-[10px] text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+                                    {case_.description}
+                                  </p>
+                                </div>
+
+                                <div className="text-[10px] text-gray-600 bg-blue-50 rounded p-1.5">
+                                  <strong>Contact:</strong> {case_.contactInfo}
+                                </div>
+
+                                {case_.createdAt && (
+                                  <div className="flex flex-wrap gap-1.5 text-[10px] text-gray-500">
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      <span>Created: {format(new Date(case_.createdAt), 'Pp')}</span>
+                                    </div>
+                                    {case_.updatedAt && (
+                                      <div className="flex items-center gap-1">
+                                        <Clock className="h-3 w-3" />
+                                        <span>Updated: {format(new Date(case_.updatedAt), 'Pp')}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {case_.imageUrl && (
+                                  <div className="mt-1.5">
+                                    <img 
+                                      src={case_.imageUrl} 
+                                      alt={`Case ${case_.id} - ${case_.childName}`}
+                                      className="rounded w-full h-20 object-cover shadow-sm"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
                   </AnimatePresence>
                 </CardContent>
               </Card>

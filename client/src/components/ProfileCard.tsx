@@ -112,7 +112,7 @@ export default function ProfileCard({ address, user }: ProfileCardProps) {
                   )}
                 </AnimatePresence>
               </Button>
-              <Button 
+              {/* <Button 
                 className="w-full relative"
                 onClick={() => {
                   // Handle saved cases
@@ -129,7 +129,7 @@ export default function ProfileCard({ address, user }: ProfileCardProps) {
                     Saved Cases
                   </motion.div>
                 </AnimatePresence>
-              </Button>
+              </Button> */}
             </motion.div>
 
             <UserDashboard address={address} />
