@@ -68,7 +68,7 @@ export default function Admin() {
 
   const { data: cases, isLoading } = useQuery<Case[]>({
     queryKey: ["/api/cases"],
-    gcTime: 0, 
+    gcTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
@@ -136,28 +136,28 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      <div className="max-w-[100vw] px-2 sm:px-4 lg:px-6 py-6 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="space-y-4 sm:space-y-6 w-full"
+          className="space-y-6 sm:space-y-8"
         >
-          <h1 className="text-2xl sm:text-3xl font-bold px-2 mt-5">Admin Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="grid gap-4 sm:gap-6">
+            <div className="grid gap-6 sm:gap-8">
               <Card className="shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold">Active Cases</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <AnimatePresence mode="wait">
-                    <div className="grid gap-4">
+                    <div className="grid gap-6">
                       {cases?.filter(c => c.status === 'open' || c.status === 'investigating').map((case_, index) => (
                         <motion.div
                           key={case_.id}
@@ -165,23 +165,24 @@ export default function Admin() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
                           transition={{ delay: index * 0.1 }}
+                          className="mx-auto w-full max-w-3xl"
                         >
-                          <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200 max-w-xl">
-                            <CardContent className="p-2">
-                              <div className="flex flex-col space-y-1.5">
+                          <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
+                            <CardContent className="p-4 sm:p-6">
+                              <div className="flex flex-col space-y-3">
                                 <div className="flex justify-between items-start">
-                                  <div className="flex items-center gap-1">
-                                    <span className="font-mono text-xs text-gray-500">#{case_.id}</span>
-                                    <h3 className="text-xs font-semibold text-gray-900">{case_.childName}</h3>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-sm text-gray-500">#{case_.id}</span>
+                                    <h3 className="text-base font-semibold text-gray-900">{case_.childName}</h3>
                                   </div>
                                   <Select
                                     value={case_.status || undefined}
                                     onValueChange={(value) => handleStatusUpdate(case_.id, value)}
                                     disabled={isUpdating && updatingCaseId === case_.id}
                                   >
-                                    <SelectTrigger className={`w-24 h-6 text-xs ${getStatusColor(case_.status)}`}>
+                                    <SelectTrigger className={`w-32 h-8 text-sm ${getStatusColor(case_.status)}`}>
                                       {isUpdating && updatingCaseId === case_.id ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        <Loader2 className="h-4 w-4 animate-spin" />
                                       ) : (
                                         <SelectValue placeholder="Status" />
                                       )}
@@ -194,53 +195,53 @@ export default function Admin() {
                                   </Select>
                                 </div>
 
-                                <div className="flex flex-wrap gap-2">
-                                  <div className="flex items-center gap-1">
-                                    <Tag className="h-3 w-3 text-gray-600" />
-                                    <span className="text-[10px]">{getCaseTypeLabel(case_.caseType)}</span>
+                                <div className="flex flex-wrap gap-3">
+                                  <div className="flex items-center gap-1.5">
+                                    <Tag className="h-4 w-4 text-gray-600" />
+                                    <span className="text-sm">{getCaseTypeLabel(case_.caseType)}</span>
                                   </div>
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3 text-gray-600" />
-                                    <span className="text-[10px]">Age: {case_.age}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="h-4 w-4 text-gray-600" />
+                                    <span className="text-sm">Age: {case_.age}</span>
                                   </div>
                                 </div>
 
-                                <div className="flex items-start gap-1">
-                                  <MapPin className="h-3 w-3 text-gray-600 mt-0.5 flex-shrink-0" />
-                                  <span className="text-[10px] text-gray-600">{case_.location}</span>
+                                <div className="flex items-start gap-1.5">
+                                  <MapPin className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
+                                  <span className="text-sm text-gray-600">{case_.location}</span>
                                 </div>
 
-                                <div className="bg-gray-50 rounded p-1.5">
-                                  <p className="text-[10px] text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+                                <div className="bg-gray-50 rounded-lg p-3">
+                                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
                                     {case_.description}
                                   </p>
                                 </div>
 
-                                <div className="text-[10px] text-gray-600 bg-blue-50 rounded p-1.5">
+                                <div className="text-sm text-gray-600 bg-blue-50 rounded-lg p-3">
                                   <strong>Contact:</strong> {case_.contactInfo}
                                 </div>
 
                                 {case_.createdAt && (
-                                  <div className="flex flex-wrap gap-1.5 text-[10px] text-gray-500">
-                                    <div className="flex items-center gap-1">
-                                      <Calendar className="h-3 w-3" />
-                                      <span>Created: {format(new Date(case_.createdAt), 'Pp')}</span>
+                                  <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                                    <div className="flex items-center gap-1.5">
+                                      <Calendar className="h-4 w-4" />
+                                      <span>Created: {format(new Date(case_.createdAt), 'PPp')}</span>
                                     </div>
                                     {case_.updatedAt && (
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        <span>Updated: {format(new Date(case_.updatedAt), 'Pp')}</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <Clock className="h-4 w-4" />
+                                        <span>Updated: {format(new Date(case_.updatedAt), 'PPp')}</span>
                                       </div>
                                     )}
                                   </div>
                                 )}
 
                                 {case_.imageUrl && (
-                                  <div className="mt-1.5">
-                                    <img 
-                                      src={case_.imageUrl} 
+                                  <div className="mt-2">
+                                    <img
+                                      src={case_.imageUrl}
                                       alt={`Case ${case_.id} - ${case_.childName}`}
-                                      className="rounded w-full h-20 object-cover shadow-sm"
+                                      className="rounded-lg w-full h-48 object-cover shadow-sm"
                                     />
                                   </div>
                                 )}
@@ -260,7 +261,7 @@ export default function Admin() {
                 </CardHeader>
                 <CardContent>
                   <AnimatePresence mode="wait">
-                    <div className="grid gap-4">
+                    <div className="grid gap-6">
                       {cases?.filter(c => c.status === 'resolved').map((case_, index) => (
                         <motion.div
                           key={case_.id}
@@ -268,23 +269,24 @@ export default function Admin() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
                           transition={{ delay: index * 0.1 }}
+                          className="mx-auto w-full max-w-3xl"
                         >
-                          <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200 max-w-xl">
-                            <CardContent className="p-2">
-                              <div className="flex flex-col space-y-1.5">
+                          <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
+                            <CardContent className="p-4 sm:p-6">
+                              <div className="flex flex-col space-y-3">
                                 <div className="flex justify-between items-start">
-                                  <div className="flex items-center gap-1">
-                                    <span className="font-mono text-xs text-gray-500">#{case_.id}</span>
-                                    <h3 className="text-xs font-semibold text-gray-900">{case_.childName}</h3>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-sm text-gray-500">#{case_.id}</span>
+                                    <h3 className="text-base font-semibold text-gray-900">{case_.childName}</h3>
                                   </div>
                                   <Select
                                     value={case_.status || undefined}
                                     onValueChange={(value) => handleStatusUpdate(case_.id, value)}
                                     disabled={isUpdating && updatingCaseId === case_.id}
                                   >
-                                    <SelectTrigger className={`w-24 h-6 text-xs ${getStatusColor(case_.status)}`}>
+                                    <SelectTrigger className={`w-32 h-8 text-sm ${getStatusColor(case_.status)}`}>
                                       {isUpdating && updatingCaseId === case_.id ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        <Loader2 className="h-4 w-4 animate-spin" />
                                       ) : (
                                         <SelectValue placeholder="Status" />
                                       )}
@@ -297,53 +299,53 @@ export default function Admin() {
                                   </Select>
                                 </div>
 
-                                <div className="flex flex-wrap gap-2">
-                                  <div className="flex items-center gap-1">
-                                    <Tag className="h-3 w-3 text-gray-600" />
-                                    <span className="text-[10px]">{getCaseTypeLabel(case_.caseType)}</span>
+                                <div className="flex flex-wrap gap-3">
+                                  <div className="flex items-center gap-1.5">
+                                    <Tag className="h-4 w-4 text-gray-600" />
+                                    <span className="text-sm">{getCaseTypeLabel(case_.caseType)}</span>
                                   </div>
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3 text-gray-600" />
-                                    <span className="text-[10px]">Age: {case_.age}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="h-4 w-4 text-gray-600" />
+                                    <span className="text-sm">Age: {case_.age}</span>
                                   </div>
                                 </div>
 
-                                <div className="flex items-start gap-1">
-                                  <MapPin className="h-3 w-3 text-gray-600 mt-0.5 flex-shrink-0" />
-                                  <span className="text-[10px] text-gray-600">{case_.location}</span>
+                                <div className="flex items-start gap-1.5">
+                                  <MapPin className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
+                                  <span className="text-sm text-gray-600">{case_.location}</span>
                                 </div>
 
-                                <div className="bg-gray-50 rounded p-1.5">
-                                  <p className="text-[10px] text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+                                <div className="bg-gray-50 rounded-lg p-3">
+                                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
                                     {case_.description}
                                   </p>
                                 </div>
 
-                                <div className="text-[10px] text-gray-600 bg-blue-50 rounded p-1.5">
+                                <div className="text-sm text-gray-600 bg-blue-50 rounded-lg p-3">
                                   <strong>Contact:</strong> {case_.contactInfo}
                                 </div>
 
                                 {case_.createdAt && (
-                                  <div className="flex flex-wrap gap-1.5 text-[10px] text-gray-500">
-                                    <div className="flex items-center gap-1">
-                                      <Calendar className="h-3 w-3" />
-                                      <span>Created: {format(new Date(case_.createdAt), 'Pp')}</span>
+                                  <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                                    <div className="flex items-center gap-1.5">
+                                      <Calendar className="h-4 w-4" />
+                                      <span>Created: {format(new Date(case_.createdAt), 'PPp')}</span>
                                     </div>
                                     {case_.updatedAt && (
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        <span>Updated: {format(new Date(case_.updatedAt), 'Pp')}</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <Clock className="h-4 w-4" />
+                                        <span>Updated: {format(new Date(case_.updatedAt), 'PPp')}</span>
                                       </div>
                                     )}
                                   </div>
                                 )}
 
                                 {case_.imageUrl && (
-                                  <div className="mt-1.5">
-                                    <img 
-                                      src={case_.imageUrl} 
+                                  <div className="mt-2">
+                                    <img
+                                      src={case_.imageUrl}
                                       alt={`Case ${case_.id} - ${case_.childName}`}
-                                      className="rounded w-full h-20 object-cover shadow-sm"
+                                      className="rounded-lg w-full h-48 object-cover shadow-sm"
                                     />
                                   </div>
                                 )}
