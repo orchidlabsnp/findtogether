@@ -14,13 +14,18 @@ export default function UserDashboard({ address }: UserDashboardProps) {
   // Normalize address to lowercase for consistent comparison
   const normalizedAddress = address.toLowerCase();
 
-  const { data: userCases, isLoading } = useQuery<Case[]>({
+  const { data: userCases, isLoading, error } = useQuery<Case[]>({
     queryKey: [`/api/cases/user/${normalizedAddress}`],
     retry: 3,
     retryDelay: 1000,
     refetchInterval: 5000, // Refresh every 5 seconds
     staleTime: 0, // Consider data stale immediately
   });
+
+  console.log("UserDashboard - Address:", normalizedAddress);
+  console.log("UserDashboard - Cases:", userCases);
+  console.log("UserDashboard - Loading:", isLoading);
+  console.log("UserDashboard - Error:", error);
 
   const getStatusColor = (status: string | null) => {
     switch (status?.toLowerCase()) {
@@ -61,6 +66,16 @@ export default function UserDashboard({ address }: UserDashboardProps) {
     return (
       <div className="flex justify-center items-center p-4 sm:p-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error("Error fetching user cases:", error);
+    return (
+      <div className="text-center p-4 text-red-600">
+        <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+        <p>Error loading cases. Please try again later.</p>
       </div>
     );
   }
@@ -155,16 +170,20 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                             </div>
 
                             {/* Timestamps */}
-                            <div className="flex flex-wrap gap-4 text-sm text-gray-500 pt-2">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4" />
-                                <span>Created: {format(new Date(case_.createdAt), 'PPp')}</span>
+                            {case_.createdAt && (
+                              <div className="flex flex-wrap gap-4 text-sm text-gray-500 pt-2">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>Created: {format(new Date(case_.createdAt), 'PPp')}</span>
+                                </div>
+                                {case_.updatedAt && (
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4" />
+                                    <span>Last Updated: {format(new Date(case_.updatedAt), 'PPp')}</span>
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4" />
-                                <span>Last Updated: {format(new Date(case_.updatedAt), 'PPp')}</span>
-                              </div>
-                            </div>
+                            )}
 
                             {/* Case Image */}
                             {case_.imageUrl && (

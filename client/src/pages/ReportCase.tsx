@@ -4,7 +4,7 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   Select,
   SelectContent,
@@ -42,15 +42,43 @@ const reportCaseSchema = z.object({
 
 type ReportCaseForm = z.infer<typeof reportCaseSchema>;
 
-interface ReportCaseProps {
-  address: string;
-}
-
-export default function ReportCase({ address }: ReportCaseProps) {
+export default function ReportCase() {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
   const [showProfileCard, setShowProfileCard] = useState(true);
+  const [currentAddress, setCurrentAddress] = useState<string | null>(null);
+
+  // Get the current wallet address
+  useEffect(() => {
+    const getWalletAddress = async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          if (accounts[0]) {
+            setCurrentAddress(accounts[0].toLowerCase());
+          }
+        } catch (error) {
+          console.error("Error getting wallet address:", error);
+          toast({
+            title: "Error",
+            description: "Failed to get wallet address",
+            variant: "destructive"
+          });
+          setLocation("/");
+        }
+      } else {
+        toast({
+          title: "MetaMask Required",
+          description: "Please install MetaMask to report cases",
+          variant: "destructive"
+        });
+        setLocation("/");
+      }
+    };
+
+    getWalletAddress();
+  }, []);
 
   const form = useForm<ReportCaseForm>({
     resolver: zodResolver(reportCaseSchema),
@@ -66,6 +94,10 @@ export default function ReportCase({ address }: ReportCaseProps) {
 
   const { mutate: submitCase, isPending } = useMutation({
     mutationFn: async (data: ReportCaseForm) => {
+      if (!currentAddress) {
+        throw new Error("Please connect your wallet first");
+      }
+
       const formData = new FormData();
       const files = fileRef.current?.files;
 
@@ -75,7 +107,7 @@ export default function ReportCase({ address }: ReportCaseProps) {
         }
       }
 
-      formData.append('reporterAddress', address);
+      formData.append('reporterAddress', currentAddress);
 
       Object.entries(data).forEach(([key, value]) => {
         formData.append(key, value.toString());
@@ -111,6 +143,21 @@ export default function ReportCase({ address }: ReportCaseProps) {
 
   function onSubmit(data: ReportCaseForm) {
     submitCase(data);
+  }
+
+  if (!currentAddress) {
+    return (
+      <div className="min-h-screen w-full bg-background py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <Card>
+            <CardContent className="p-6">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+              <p className="mt-4">Connecting to wallet...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   return (
