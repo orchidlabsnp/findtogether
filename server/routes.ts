@@ -53,36 +53,24 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/cases", upload.array("files"), async (req, res) => {
     try {
-      const { childName, age, location, description, contactInfo, caseType, reporterAddress } = req.body;
+      const { childName, age, location, description, contactInfo, caseType } = req.body;
       const files = req.files as Express.Multer.File[];
-
-      if (!childName || !age || !location || !description || !contactInfo || !caseType || !reporterAddress) {
+      
+      if (!childName || !age || !location || !description || !contactInfo || !caseType) {
         return res.status(400).send("All fields are required");
-      }
-
-      // Get or create user
-      let user = await db.query.users.findFirst({
-        where: eq(users.address, reporterAddress)
-      });
-
-      if (!user) {
-        const [newUser] = await db.insert(users)
-          .values({ address: reporterAddress })
-          .returning();
-        user = newUser;
       }
 
       // Get the first image file to use as the main image
       const imageFile = files?.find(file => file.mimetype.startsWith('image/'));
       let imageUrl;
       let aiCharacteristics;
-
+      
       if (imageFile) {
         try {
           // Process with AI first
           const analysis = await getImageDescription(imageFile.buffer);
           aiCharacteristics = JSON.stringify(analysis.characteristics);
-
+          
           // Save to disk after AI processing
           const filename = `${Date.now()}-${imageFile.originalname}`;
           await fs.promises.writeFile(`./uploads/${filename}`, imageFile.buffer);
@@ -101,8 +89,7 @@ export function registerRoutes(app: Express): Server {
         caseType,
         imageUrl,
         aiCharacteristics,
-        status: 'open',
-        reporterId: user.id // Link case to user
+        status: 'open'
       }).returning();
 
       // Analyze the case and send notifications if necessary
@@ -147,7 +134,7 @@ export function registerRoutes(app: Express): Server {
 
     try {
       let searchResults;
-
+      
       switch (searchType) {
         case 'location':
           searchResults = await db.query.cases.findMany({
@@ -162,7 +149,7 @@ export function registerRoutes(app: Express): Server {
             orderBy: (cases, { desc }) => [desc(cases.createdAt)]
           });
           break;
-
+        
         case 'text':
           searchResults = await db.query.cases.findMany({
             where: (cases, { or, ilike }) => 
@@ -181,37 +168,37 @@ export function registerRoutes(app: Express): Server {
             console.log('No image file provided');
             return res.status(400).send("Image file is required for image search");
           }
-
+          
           try {
             const imageFile = files[0];
             console.log('Processing image:', imageFile.originalname);
-
+            
             // Ensure uploads directory exists
             if (!fs.existsSync('./uploads')) {
               console.log('Creating uploads directory');
               fs.mkdirSync('./uploads', { recursive: true });
             }
-
+            
             // Save image to disk first
             const filename = `${Date.now()}-${imageFile.originalname}`;
             const filepath = `./uploads/${filename}`;
             console.log('Saving image to:', filepath);
-
+            
             await fs.promises.writeFile(filepath, imageFile.buffer);
             const imageUrl = `/uploads/${filename}`;
             console.log('Image saved successfully at:', imageUrl);
-
+            
             console.log('Processing image analysis...');
             const imageAnalysis = await getImageDescription(imageFile.buffer);
             console.log('Image analysis completed:', imageAnalysis);
-
+          
             // Get all cases
             const allCases = await db.query.cases.findMany({
               orderBy: (cases, { desc }) => [desc(cases.createdAt)]
             });
-
+            
             console.log('Found cases for comparison:', allCases.length);
-
+          
             // Compare image with each case using enhanced analysis
             const casesWithScores = await Promise.all(
               allCases.map(async (case_) => {
@@ -225,7 +212,7 @@ export function registerRoutes(app: Express): Server {
                       matchDetails: null
                     };
                   }
-
+                  
                   // Read the case image file
                   const casePath = path.join(process.cwd(), case_.imageUrl.replace(/^\//, ''));
                   if (!fs.existsSync(casePath)) {
@@ -237,24 +224,24 @@ export function registerRoutes(app: Express): Server {
                       matchDetails: null
                     };
                   }
-
+                  
                   const caseImageBuffer = await fs.promises.readFile(casePath);
                   const characteristics = case_.aiCharacteristics ? 
                     JSON.parse(case_.aiCharacteristics) : undefined;
-
+                  
                   console.log(`Analyzing case ${case_.id} with AI characteristics`);
-
+                  
                   const comparison = await compareImageWithDescription(
                     caseImageBuffer,
                     case_.description,
                     characteristics
                   );
-
+                  
                   console.log(`Case ${case_.id} analysis complete:`, {
                     similarity: comparison.similarity,
                     matchDetails: comparison.matchDetails
                   });
-
+                  
                   return { 
                     ...case_,
                     similarity: comparison.similarity,
@@ -277,24 +264,24 @@ export function registerRoutes(app: Express): Server {
                 }
               })
             );
-
+          
             // Enhanced filtering with detailed match analysis
             searchResults = casesWithScores
               .filter(case_ => {
                 // Case must meet minimum overall similarity threshold
                 if (case_.similarity < 0.4) return false;
-
+                
                 // If match details available, apply additional criteria
                 if (case_.matchDetails) {
                   const { physicalMatch, distinctiveFeatureMatch } = case_.matchDetails;
                   // Require good physical match OR strong distinctive features
                   return physicalMatch > 0.6 || distinctiveFeatureMatch > 0.7;
                 }
-
+                
                 return true;
               })
               .sort((a, b) => b.similarity - a.similarity);
-
+            
             console.log(`Found ${searchResults.length} similar cases`);
           } catch (error) {
             console.error('Error processing image search:', error);
@@ -314,7 +301,7 @@ export function registerRoutes(app: Express): Server {
             orderBy: (cases, { desc }) => [desc(cases.createdAt)]
           });
       }
-
+      
       res.json(searchResults);
     } catch (error) {
       console.error('Search error:', error);
@@ -327,7 +314,7 @@ export function registerRoutes(app: Express): Server {
     const existingUser = await db.query.users.findFirst({
       where: eq(users.address, address)
     });
-
+    
     if (existingUser) {
       res.json(existingUser);
     } else {
