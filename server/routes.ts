@@ -53,17 +53,20 @@ export function registerRoutes(app: Express): Server {
 
 app.post("/api/cases", upload.array("files"), async (req, res) => {
     try {
+      console.log("Received case submission with body:", { ...req.body, files: req.files?.length || 0 });
+
       const { childName, age, location, description, contactInfo, caseType, reporterAddress } = req.body;
       const files = req.files as Express.Multer.File[];
 
       if (!childName || !age || !location || !description || !contactInfo || !caseType || !reporterAddress) {
+        console.log("Missing required fields:", { childName, age, location, description, contactInfo, caseType, reporterAddress });
         return res.status(400).send("All fields are required");
       }
 
-      console.log("Creating case for reporter address:", reporterAddress);
-
       // Get or create user by address - normalize the address to lowercase
       const normalizedAddress = reporterAddress.toLowerCase();
+      console.log("Looking up user with normalized address:", normalizedAddress);
+
       let user = await db.query.users.findFirst({
         where: eq(users.address, normalizedAddress)
       });
@@ -94,6 +97,7 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
           const filename = `${Date.now()}-${imageFile.originalname}`;
           await fs.promises.writeFile(`./uploads/${filename}`, imageFile.buffer);
           imageUrl = `/uploads/${filename}`;
+          console.log("Image saved successfully:", imageUrl);
         } catch (error) {
           console.error("Error processing image:", error);
         }
@@ -111,7 +115,9 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
         imageUrl,
         aiCharacteristics,
         reporterId: user.id,
-        status: 'open'
+        status: 'open',
+        createdAt: new Date(),
+        updatedAt: new Date()
       }).returning();
 
       console.log("Created new case:", newCase);
@@ -161,7 +167,8 @@ app.get("/api/cases/user/:address", async (req, res) => {
       // Get cases for this user with all details using a direct query
       const userCases = await db.select()
         .from(cases)
-        .where(eq(cases.reporterId, user.id));
+        .where(eq(cases.reporterId, user.id))
+        .orderBy(cases.createdAt);
 
       console.log("Found cases for user:", userCases.length);
 
@@ -367,14 +374,18 @@ app.get("/api/cases/user/:address", async (req, res) => {
 
   app.post("/api/users", async (req, res) => {
     const { address } = req.body;
+    const normalizedAddress = address.toLowerCase();
+
     const existingUser = await db.query.users.findFirst({
-      where: eq(users.address, address)
+      where: eq(users.address, normalizedAddress)
     });
 
     if (existingUser) {
       res.json(existingUser);
     } else {
-      const [newUser] = await db.insert(users).values({ address }).returning();
+      const [newUser] = await db.insert(users)
+        .values({ address: normalizedAddress })
+        .returning();
       res.json(newUser);
     }
   });
