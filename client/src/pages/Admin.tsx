@@ -113,27 +113,27 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      <div className="max-w-[100vw] px-2 sm:px-4 lg:px-6 py-6 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="space-y-6"
+          className="space-y-4 sm:space-y-6 w-full"
         >
-          <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold px-2">Admin Dashboard</h1>
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="grid gap-6">
-              <Card>
+            <div className="grid gap-4 sm:gap-6 w-full">
+              <Card className="w-full overflow-hidden">
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-xl sm:text-2xl">Pending Cases</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                   <AnimatePresence mode="wait">
                     {cases?.filter((c: Case) => c.status === 'open' || c.status === 'investigating').map((case_: Case) => (
                       <motion.div 
@@ -144,10 +144,10 @@ export default function Admin() {
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4">
-                          <div className="space-y-1">
-                            <h3 className="font-semibold text-base sm:text-lg">Case #{case_.id}: {case_.childName}</h3>
-                            <p className="text-sm text-gray-600">Location: {case_.location}</p>
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4 px-2">
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <h3 className="font-semibold text-base sm:text-lg truncate">Case #{case_.id}: {case_.childName}</h3>
+                            <p className="text-sm text-gray-600 truncate">Location: {case_.location}</p>
                             <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
                           </div>
                           <Select
@@ -155,7 +155,7 @@ export default function Admin() {
                             onValueChange={(value) => handleStatusUpdate(case_.id, value)}
                             disabled={isUpdating && updatingCaseId === case_.id}
                           >
-                            <SelectTrigger className="w-full sm:w-32">
+                            <SelectTrigger className="w-full sm:w-32 shrink-0">
                               {isUpdating && updatingCaseId === case_.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
@@ -169,8 +169,8 @@ export default function Admin() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="mt-2 sm:mt-4">
-                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer">
+                        <div className="mt-2 sm:mt-4 px-2">
+                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer max-w-full">
                             {case_.description}
                           </p>
                           <button 
@@ -189,11 +189,11 @@ export default function Admin() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="w-full overflow-hidden">
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-xl sm:text-2xl">Resolved Cases</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                   <AnimatePresence mode="wait">
                     {cases?.filter((c: Case) => c.status === 'resolved').map((case_: Case) => (
                       <motion.div 
@@ -204,10 +204,10 @@ export default function Admin() {
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4">
-                          <div className="space-y-1">
-                            <h3 className="font-semibold text-base sm:text-lg">Case #{case_.id}: {case_.childName}</h3>
-                            <p className="text-sm text-gray-600">Location: {case_.location}</p>
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4 px-2">
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <h3 className="font-semibold text-base sm:text-lg truncate">Case #{case_.id}: {case_.childName}</h3>
+                            <p className="text-sm text-gray-600 truncate">Location: {case_.location}</p>
                             <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
                           </div>
                           <Select
@@ -215,7 +215,7 @@ export default function Admin() {
                             onValueChange={(value) => handleStatusUpdate(case_.id, value)}
                             disabled={isUpdating && updatingCaseId === case_.id}
                           >
-                            <SelectTrigger className="w-full sm:w-32">
+                            <SelectTrigger className="w-full sm:w-32 shrink-0">
                               {isUpdating && updatingCaseId === case_.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
@@ -229,8 +229,8 @@ export default function Admin() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="mt-2 sm:mt-4">
-                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer">
+                        <div className="mt-2 sm:mt-4 px-2">
+                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer max-w-full">
                             {case_.description}
                           </p>
                           <button 
