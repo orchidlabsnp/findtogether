@@ -144,7 +144,7 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Calendar className="h-4 w-4" />
-              <span>Reported: {format(new Date(case_.createdAt), 'PP')}</span>
+              <span>Reported: {case_.createdAt ? format(new Date(case_.createdAt), 'PP') : 'Not available'}</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Phone className="h-4 w-4" />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -25,6 +25,7 @@ const ADMIN_ADDRESS = "0x5A498a4520b56Fe0119Bd3D8D032D53c65c035a7";
 export default function Admin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -84,6 +85,9 @@ export default function Admin() {
         throw new Error(await response.text());
       }
 
+      // Invalidate and refetch the cases query
+      await queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
+
       toast({
         title: "Status Updated",
         description: "Case status has been successfully updated",
@@ -124,31 +128,41 @@ export default function Admin() {
                 <CardTitle>Pending Cases</CardTitle>
               </CardHeader>
               <CardContent>
-                {cases?.filter(c => c.status === 'open').map(case_ => (
-                  <div key={case_.id} className="border-b py-4 last:border-0">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="font-semibold">Case #{case_.id}: {case_.childName}</h3>
-                        <p className="text-sm text-gray-600">Location: {case_.location}</p>
-                        <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
+                <AnimatePresence mode="wait">
+                  {cases?.filter(c => c.status === 'open').map(case_ => (
+                    <motion.div 
+                      key={case_.id} 
+                      className="border-b py-4 last:border-0"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-semibold">Case #{case_.id}: {case_.childName}</h3>
+                          <p className="text-sm text-gray-600">Location: {case_.location}</p>
+                          <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
+                        </div>
+                        <Select
+                          value={case_.status || undefined}
+                          onValueChange={(value) => handleStatusUpdate(case_.id, value)}
+                          disabled={isUpdating}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="open">Open</SelectItem>
+                            <SelectItem value="investigating">Investigating</SelectItem>
+                            <SelectItem value="resolved">Resolved</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Select
-                        defaultValue={case_.status}
-                        onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="open">Open</SelectItem>
-                          <SelectItem value="investigating">Investigating</SelectItem>
-                          <SelectItem value="resolved">Resolved</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <p className="text-sm">{case_.description}</p>
-                  </div>
-                ))}
+                      <p className="text-sm">{case_.description}</p>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </CardContent>
             </Card>
 
@@ -157,31 +171,41 @@ export default function Admin() {
                 <CardTitle>Resolved Cases</CardTitle>
               </CardHeader>
               <CardContent>
-                {cases?.filter(c => c.status === 'resolved').map(case_ => (
-                  <div key={case_.id} className="border-b py-4 last:border-0">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="font-semibold">Case #{case_.id}: {case_.childName}</h3>
-                        <p className="text-sm text-gray-600">Location: {case_.location}</p>
-                        <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
+                <AnimatePresence mode="wait">
+                  {cases?.filter(c => c.status === 'resolved').map(case_ => (
+                    <motion.div 
+                      key={case_.id} 
+                      className="border-b py-4 last:border-0"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-semibold">Case #{case_.id}: {case_.childName}</h3>
+                          <p className="text-sm text-gray-600">Location: {case_.location}</p>
+                          <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
+                        </div>
+                        <Select
+                          value={case_.status || undefined}
+                          onValueChange={(value) => handleStatusUpdate(case_.id, value)}
+                          disabled={isUpdating}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="open">Open</SelectItem>
+                            <SelectItem value="investigating">Investigating</SelectItem>
+                            <SelectItem value="resolved">Resolved</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Select
-                        defaultValue={case_.status}
-                        onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="open">Open</SelectItem>
-                          <SelectItem value="investigating">Investigating</SelectItem>
-                          <SelectItem value="resolved">Resolved</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <p className="text-sm">{case_.description}</p>
-                  </div>
-                ))}
+                      <p className="text-sm">{case_.description}</p>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </CardContent>
             </Card>
           </div>
