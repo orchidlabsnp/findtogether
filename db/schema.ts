@@ -28,7 +28,7 @@ export const cases = pgTable("cases", {
   status: text("status").default("open").notNull(),
   aiCharacteristics: text("ai_characteristics"),
   matchConfidence: text("match_confidence"),
-  ipfsHash: text("ipfs_hash"), // Preserve existing column
+  ipfsHash: text("ipfs_hash"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
