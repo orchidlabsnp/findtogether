@@ -3,7 +3,7 @@ import { Case } from "@db/schema";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Calendar, MapPin } from "lucide-react";
+import { Bell, Calendar, MapPin, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface UserDashboardProps {
@@ -11,10 +11,10 @@ interface UserDashboardProps {
 }
 
 export default function UserDashboard({ address }: UserDashboardProps) {
-  const { data: userCases, isLoading } = useQuery<Case[]>({
+  const { data: userCases, isLoading, error } = useQuery<Case[]>({
     queryKey: [`/api/cases/user/${address}`],
-    refetchInterval: 5000, // Refetch every 5 seconds to keep data fresh
-    refetchOnWindowFocus: true, // Refetch when window gains focus
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const getStatusColor = (status: string | null) => {
@@ -33,11 +33,19 @@ export default function UserDashboard({ address }: UserDashboardProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center p-8">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"
-        />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <Card className="w-full">
+          <CardContent className="pt-6">
+            <p className="text-red-500">Error loading cases. Please try again later.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

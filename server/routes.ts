@@ -366,14 +366,21 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
   app.get("/api/cases/user/:address", async (req, res) => {
     try {
       const { address } = req.params;
-      const user = await db.query.users.findFirst({
+
+      // Get or create user by address
+      let user = await db.query.users.findFirst({
         where: eq(users.address, address)
       });
 
       if (!user) {
-        return res.status(404).send("User not found");
+        // Create new user if doesn't exist
+        const [newUser] = await db.insert(users)
+          .values({ address })
+          .returning();
+        user = newUser;
       }
 
+      // Get cases for this user
       const userCases = await db.query.cases.findMany({
         where: eq(cases.reporterId, user.id),
         orderBy: (cases, { desc }) => [desc(cases.createdAt)]
