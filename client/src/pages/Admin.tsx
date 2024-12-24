@@ -45,7 +45,7 @@ export default function Admin() {
       .then((accounts: string[]) => {
         const address = accounts[0];
         setCurrentAddress(address);
-        
+
         if (address.toLowerCase() !== ADMIN_ADDRESS.toLowerCase()) {
           toast({
             title: "Access Denied",
@@ -89,7 +89,7 @@ export default function Admin() {
         description: "Case status has been successfully updated",
       });
 
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Update Failed",
         description: error.message,
