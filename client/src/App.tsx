@@ -5,6 +5,7 @@ import Mission from "@/pages/Mission";
 import SafeZones from "@/pages/SafeZones";
 import ReportCase from "@/pages/ReportCase";
 import SafetyGame from "@/pages/SafetyGame";
+import Admin from "@/pages/Admin";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import NotificationToast from "@/components/NotificationToast";
@@ -24,6 +25,7 @@ function App() {
             <Route path="/safe-zones" component={SafeZones} />
             <Route path="/report-case" component={ReportCase} />
             <Route path="/safety-game" component={SafetyGame} />
+            <Route path="/admin" component={Admin} />
             <Route>
               <motion.div
                 initial={{ opacity: 0 }}

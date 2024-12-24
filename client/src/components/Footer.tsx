@@ -29,6 +29,13 @@ export default function Footer() {
                   </a>
                 </Link>
               </li>
+              <li>
+                <Link href="/admin">
+                  <a className="text-gray-400 hover:text-white transition-colors">
+                    Admin
+                  </a>
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -36,9 +43,11 @@ export default function Footer() {
             <h4 className="font-semibold mb-4">Take Action</h4>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  Report Case
-                </a>
+                <Link href="/report-case">
+                  <a className="text-gray-400 hover:text-white transition-colors">
+                    Report Case
+                  </a>
+                </Link>
               </li>
               <li>
                 <Link href="/safe-zones">
