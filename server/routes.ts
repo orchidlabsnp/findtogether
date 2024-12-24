@@ -1,4 +1,4 @@
-import express, { type Express, Request, Response, NextFunction } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { cases, users } from "@db/schema";
@@ -9,34 +9,6 @@ import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { initializeNotificationService } from "./services/notifications";
 import { analyzeAndNotify } from "./services/reportAnalysis";
-
-// Add request logging middleware
-const requestLogger = (req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Started`);
-
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Completed in ${duration}ms with status ${res.statusCode}`);
-  });
-
-  next();
-};
-
-// Add error handling middleware
-const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(`[${new Date().toISOString()}] Error processing ${req.method} ${req.url}:`, err);
-
-  // Send appropriate error response
-  res.status(err.status || 500).json({
-    error: {
-      message: err.message || 'Internal Server Error',
-      status: err.status || 500,
-      path: req.url,
-      timestamp: new Date().toISOString()
-    }
-  });
-};
 
 const storage = multer.diskStorage({
   destination: "./uploads",
@@ -64,27 +36,22 @@ const upload = multer({
 });
 
 export function registerRoutes(app: Express): Server {
-  // Add logging middleware
-  app.use(requestLogger);
-
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
 
-  app.get("/api/cases", async (req, res, next) => {
+  app.get("/api/cases", async (req, res) => {
     try {
-      console.log("Fetching all cases...");
       const allCases = await db.query.cases.findMany({
         orderBy: (cases, { desc }) => [desc(cases.createdAt)]
       });
-      console.log(`Successfully fetched ${allCases.length} cases`);
       res.json(allCases);
     } catch (error) {
       console.error("Error fetching cases:", error);
-      next(error);
+      res.status(500).send("Failed to fetch cases");
     }
   });
 
-app.post("/api/cases", upload.array("files"), async (req, res, next) => {
+app.post("/api/cases", upload.array("files"), async (req, res) => {
     try {
       const { childName, age, location, description, contactInfo, caseType, reporterAddress } = req.body;
       const files = req.files as Express.Multer.File[];
@@ -123,7 +90,6 @@ app.post("/api/cases", upload.array("files"), async (req, res, next) => {
           imageUrl = `/uploads/${filename}`;
         } catch (error) {
           console.error("Error processing image:", error);
-          next(error); // Pass error to error handler
         }
       }
 
@@ -160,11 +126,11 @@ app.post("/api/cases", upload.array("files"), async (req, res, next) => {
       }
     } catch (error) {
       console.error("Error creating case:", error);
-      next(error); // Pass error to error handler
+      res.status(500).send("Failed to create case");
     }
-  });
+});
 
-  app.get("/api/cases/user/:address", async (req, res, next) => {
+app.get("/api/cases/user/:address", async (req, res) => {
     try {
       const { address } = req.params;
 
@@ -190,14 +156,14 @@ app.post("/api/cases", upload.array("files"), async (req, res, next) => {
       res.json(userCases);
     } catch (error) {
       console.error("Error fetching user cases:", error);
-      next(error); // Pass error to error handler
+      res.status(500).send("Failed to fetch user cases");
     }
-  });
+});
 
-  app.post("/api/cases/search", upload.array("files"), async (req, res, next) => {
+app.post("/api/cases/search", upload.array("files"), async (req, res) => {
     console.log('Search request received:', {
       searchType: req.body.searchType,
-      hasFiles: req.files && (req.files as Express.Multer.File[]).length > 0,
+      hasFiles: req.files ? req.files.length > 0 : false,
       query: req.body.query
     });
 
@@ -363,7 +329,7 @@ app.post("/api/cases", upload.array("files"), async (req, res, next) => {
             console.log(`Found ${searchResults.length} similar cases`);
           } catch (error) {
             console.error('Error processing image search:', error);
-            next(error); //Pass error to error handler
+            return res.status(500).send("Error processing image search");
           }
           break;
 
@@ -383,31 +349,26 @@ app.post("/api/cases", upload.array("files"), async (req, res, next) => {
       res.json(searchResults);
     } catch (error) {
       console.error('Search error:', error);
-      next(error); //Pass error to error handler
+      res.status(500).send("Error performing search");
     }
   });
 
-  app.post("/api/users", async (req, res, next) => {
-    try{
-      const { address } = req.body;
-      const existingUser = await db.query.users.findFirst({
-        where: eq(users.address, address)
-      });
-  
-      if (existingUser) {
-        res.json(existingUser);
-      } else {
-        const [newUser] = await db.insert(users).values({ address }).returning();
-        res.json(newUser);
-      }
-    } catch (error) {
-      console.error("Error creating user:", error);
-      next(error); // Pass error to error handler
+  app.post("/api/users", async (req, res) => {
+    const { address } = req.body;
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.address, address)
+    });
+
+    if (existingUser) {
+      res.json(existingUser);
+    } else {
+      const [newUser] = await db.insert(users).values({ address }).returning();
+      res.json(newUser);
     }
   });
 
   // Add PUT endpoint for updating case status
-  app.put("/api/cases/:id/status", async (req, res, next) => {
+  app.put("/api/cases/:id/status", async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
@@ -428,7 +389,7 @@ app.post("/api/cases", upload.array("files"), async (req, res, next) => {
       res.json(updatedCase);
     } catch (error) {
       console.error("Error updating case status:", error);
-      next(error); // Pass error to error handler
+      res.status(500).send("Failed to update case status");
     }
   });
 
@@ -437,9 +398,6 @@ app.post("/api/cases", upload.array("files"), async (req, res, next) => {
 
   // Initialize notification service
   initializeNotificationService(httpServer);
-
-  // Add error handling middleware last
-  app.use(errorHandler);
 
   return httpServer;
 }
