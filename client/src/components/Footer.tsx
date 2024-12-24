@@ -36,6 +36,13 @@ export default function Footer() {
                   </a>
                 </Link>
               </li>
+              <li>
+                <Link href="/analytics">
+                  <a className="text-gray-400 hover:text-white transition-colors">
+                    Analytics
+                  </a>
+                </Link>
+              </li>
             </ul>
           </div>
 
