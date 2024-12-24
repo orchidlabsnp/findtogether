@@ -60,18 +60,24 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
         return res.status(400).send("All fields are required");
       }
 
-      // Get or create user by address
+      console.log("Creating case for reporter address:", reporterAddress);
+
+      // Get or create user by address - normalize the address to lowercase
+      const normalizedAddress = reporterAddress.toLowerCase();
       let user = await db.query.users.findFirst({
-        where: eq(users.address, reporterAddress)
+        where: eq(users.address, normalizedAddress)
       });
 
       if (!user) {
+        console.log("Creating new user for address:", normalizedAddress);
         // Create new user if doesn't exist
         const [newUser] = await db.insert(users)
-          .values({ address: reporterAddress })
+          .values({ address: normalizedAddress })
           .returning();
         user = newUser;
       }
+
+      console.log("User for case:", user);
 
       // Get the first image file to use as the main image
       const imageFile = files?.find(file => file.mimetype.startsWith('image/'));
@@ -93,6 +99,8 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
         }
       }
 
+      console.log("Creating case with reporterId:", user.id);
+
       const [newCase] = await db.insert(cases).values({
         childName,
         age: parseInt(age),
@@ -105,6 +113,8 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
         reporterId: user.id,
         status: 'open'
       }).returning();
+
+      console.log("Created new case:", newCase);
 
       // Analyze the case and send notifications if necessary
       try {
@@ -133,22 +143,20 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
 app.get("/api/cases/user/:address", async (req, res) => {
     try {
       const { address } = req.params;
-      console.log("Fetching cases for address:", address); // Debug log
+      const normalizedAddress = address.toLowerCase();
+      console.log("Fetching cases for normalized address:", normalizedAddress);
 
-      // Get or create user by address
+      // Get user by normalized address
       let user = await db.query.users.findFirst({
-        where: eq(users.address, address)
+        where: eq(users.address, normalizedAddress)
       });
 
       if (!user) {
-        // Create new user if doesn't exist
-        const [newUser] = await db.insert(users)
-          .values({ address })
-          .returning();
-        user = newUser;
+        console.log("No user found for address:", normalizedAddress);
+        return res.json([]); // Return empty array if no user found
       }
 
-      console.log("User found/created:", user); // Debug log
+      console.log("Found user:", user);
 
       // Get cases for this user
       const userCases = await db.query.cases.findMany({
@@ -156,14 +164,14 @@ app.get("/api/cases/user/:address", async (req, res) => {
         orderBy: (cases, { desc }) => [desc(cases.createdAt)]
       });
 
-      console.log("Found cases:", userCases.length); // Debug log
+      console.log("Found cases for user:", userCases.length);
 
       res.json(userCases);
     } catch (error) {
       console.error("Error fetching user cases:", error);
       res.status(500).send("Failed to fetch user cases");
     }
-  });
+});
 
 app.post("/api/cases/search", upload.array("files"), async (req, res) => {
     console.log('Search request received:', {

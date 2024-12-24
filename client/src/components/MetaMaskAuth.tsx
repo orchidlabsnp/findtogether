@@ -12,7 +12,9 @@ export default function MetaMaskAuth() {
   useEffect(() => {
     const checkConnection = async () => {
       const addr = await getAddress();
-      setAddress(addr);
+      if (addr) {
+        setAddress(addr.toLowerCase()); // Normalize address
+      }
     };
     checkConnection();
   }, []);
@@ -22,7 +24,7 @@ export default function MetaMaskAuth() {
       const response = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address }),
+        body: JSON.stringify({ address: address.toLowerCase() }), // Normalize address
       });
       return response.json();
     },
@@ -31,9 +33,10 @@ export default function MetaMaskAuth() {
   const handleConnect = async () => {
     try {
       const addr = await connectWallet();
-      setAddress(addr);
       if (addr) {
-        createUser(addr);
+        const normalizedAddr = addr.toLowerCase(); // Normalize address
+        setAddress(normalizedAddr);
+        createUser(normalizedAddr);
       }
     } catch (error) {
       toast({

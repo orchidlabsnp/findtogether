@@ -11,11 +11,15 @@ interface UserDashboardProps {
 }
 
 export default function UserDashboard({ address }: UserDashboardProps) {
+  // Normalize address to lowercase for consistent comparison
+  const normalizedAddress = address.toLowerCase();
+
   const { data: userCases, isLoading, error } = useQuery<Case[]>({
-    queryKey: [`/api/cases/user/${address.toLowerCase()}`],
+    queryKey: [`/api/cases/user/${normalizedAddress}`],
     retry: 3,
     retryDelay: 1000,
     refetchInterval: 5000, // Refresh every 5 seconds
+    staleTime: 0, // Consider data stale immediately to ensure fresh data on mount
   });
 
   const getStatusColor = (status: string | null) => {
@@ -40,6 +44,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
   }
 
   if (error) {
+    console.error('Dashboard error:', error);
     return (
       <div className="flex justify-center items-center p-4 sm:p-8">
         <Card className="w-full">
@@ -85,7 +90,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                     >
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                         <div className="space-y-1">
-                          <h3 className="font-medium text-base sm:text-lg">{case_.childName}</h3>
+                          <h3 className="font-medium text-base sm:text-lg">Case #{case_.id}: {case_.childName}</h3>
                           <p className="text-sm text-gray-600 line-clamp-2">{case_.description}</p>
                         </div>
                         <Badge 
