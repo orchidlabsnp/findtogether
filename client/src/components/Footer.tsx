@@ -8,7 +8,7 @@ export default function Footer() {
           <div>
             <h3 className="text-xl font-bold mb-4">FindTogether</h3>
             <p className="text-gray-400">
-              Working together to protect and find missing children.
+              Working together to protect and find missing children and fight against the child labour, child harrashment and more.
             </p>
           </div>
 

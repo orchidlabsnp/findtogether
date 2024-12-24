@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Case } from "@db/schema";
 import {
   Card,
   CardContent,
@@ -18,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import type { Case } from "@db/schema";
+
 
 const ADMIN_ADDRESS = "0x5A498a4520b56Fe0119Bd3D8D032D53c65c035a7";
 
@@ -31,7 +32,6 @@ export default function Admin() {
   const [updatingCaseId, setUpdatingCaseId] = useState<number | null>(null);
 
   useEffect(() => {
-    // Check if MetaMask is installed
     if (typeof window.ethereum === 'undefined') {
       toast({
         title: "MetaMask Required",
@@ -42,7 +42,6 @@ export default function Admin() {
       return;
     }
 
-    // Get the current account
     window.ethereum.request({ method: 'eth_requestAccounts' })
       .then((accounts: string[]) => {
         const address = accounts[0];
@@ -69,8 +68,9 @@ export default function Admin() {
 
   const { data: cases, isLoading } = useQuery<Case[]>({
     queryKey: ["/api/cases"],
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache the data
+    gcTime: 0, 
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const handleStatusUpdate = async (caseId: number, newStatus: string) => {
@@ -89,7 +89,6 @@ export default function Admin() {
         throw new Error(await response.text());
       }
 
-      // Invalidate and refetch the cases query
       await queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
 
       toast({
@@ -134,7 +133,7 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 <AnimatePresence mode="wait">
-                  {cases?.filter(c => c.status === 'open' || c.status === 'investigating').map(case_ => (
+                  {cases?.filter((c: Case) => c.status === 'open' || c.status === 'investigating').map((case_: Case) => (
                     <motion.div 
                       key={case_.id} 
                       className="border-b py-4 last:border-0"
@@ -181,7 +180,7 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 <AnimatePresence mode="wait">
-                  {cases?.filter(c => c.status === 'resolved').map(case_ => (
+                  {cases?.filter((c: Case) => c.status === 'resolved').map((case_: Case) => (
                     <motion.div 
                       key={case_.id} 
                       className="border-b py-4 last:border-0"

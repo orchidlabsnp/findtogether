@@ -1,5 +1,10 @@
 import { pgTable, text, serial, timestamp, integer, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// Define status as a literal type for better type safety
+const CaseStatus = z.enum(["open", "investigating", "resolved"]);
+const CaseType = z.enum(["child_missing", "child_labour", "child_harassment"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -71,12 +76,19 @@ export const categoryProgress = pgTable("category_progress", {
 // Schema validation
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
-export const insertCaseSchema = createInsertSchema(cases);
-export const selectCaseSchema = createSelectSchema(cases);
+export const insertCaseSchema = createInsertSchema(cases).extend({
+  status: CaseStatus.optional().default("open"),
+  caseType: CaseType
+});
+export const selectCaseSchema = createSelectSchema(cases).extend({
+  status: CaseStatus,
+  caseType: CaseType
+});
 export const insertCharacterSchema = createInsertSchema(characters);
 export const selectCharacterSchema = createSelectSchema(characters);
 export const insertAchievementSchema = createInsertSchema(achievements);
 export const selectAchievementSchema = createSelectSchema(achievements);
+
 
 // Type exports
 export type User = typeof users.$inferSelect;
@@ -89,3 +101,5 @@ export type Achievement = typeof achievements.$inferSelect;
 export type InsertAchievement = typeof achievements.$inferInsert;
 export type CategoryProgress = typeof categoryProgress.$inferSelect;
 export type InsertCategoryProgress = typeof categoryProgress.$inferInsert;
+export type CaseStatusType = z.infer<typeof CaseStatus>;
+export type CaseTypeEnum = z.infer<typeof CaseType>;

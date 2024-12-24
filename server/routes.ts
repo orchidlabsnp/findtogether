@@ -35,23 +35,20 @@ const upload = multer({
   }
 });
 
-// Middleware to handle disk storage after AI processing
-const diskStorage = multer.diskStorage({
-  destination: "./uploads",
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
-
 export function registerRoutes(app: Express): Server {
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
 
   app.get("/api/cases", async (req, res) => {
-    const allCases = await db.query.cases.findMany({
-      orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-    });
-    res.json(allCases);
+    try {
+      const allCases = await db.query.cases.findMany({
+        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+      });
+      res.json(allCases);
+    } catch (error) {
+      console.error("Error fetching cases:", error);
+      res.status(500).send("Failed to fetch cases");
+    }
   });
 
   app.post("/api/cases", upload.array("files"), async (req, res) => {
@@ -122,15 +119,15 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/cases/search", upload.array("files"), async (req, res) => {
     console.log('Search request received:', {
       searchType: req.body.searchType,
-      hasFiles: req?.files?.length > 0,
+      hasFiles: req.files ? req.files.length > 0 : false,
       query: req.body.query
     });
-    
+
     const { searchType } = req.body;
     const files = req.files as Express.Multer.File[];
     const query = req.body.query;
-    
-    if (!query && !files?.length && searchType !== "image") {
+
+    if (!query && (!files || files.length === 0) && searchType !== "image") {
       console.log('Invalid search request: missing query or files');
       return res.status(400).send("Search query or image is required");
     }
