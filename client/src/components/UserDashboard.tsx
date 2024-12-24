@@ -13,6 +13,8 @@ interface UserDashboardProps {
 export default function UserDashboard({ address }: UserDashboardProps) {
   const { data: userCases, isLoading } = useQuery<Case[]>({
     queryKey: ["/api/cases/user", address],
+    refetchInterval: 5000, // Refetch every 5 seconds to keep data fresh
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   });
 
   const getStatusColor = (status: string | null) => {
