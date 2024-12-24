@@ -60,13 +60,17 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
         return res.status(400).send("All fields are required");
       }
 
-      // Get user by address first
-      const user = await db.query.users.findFirst({
+      // Get or create user by address
+      let user = await db.query.users.findFirst({
         where: eq(users.address, reporterAddress)
       });
 
       if (!user) {
-        return res.status(404).send("User not found");
+        // Create new user if doesn't exist
+        const [newUser] = await db.insert(users)
+          .values({ address: reporterAddress })
+          .returning();
+        user = newUser;
       }
 
       // Get the first image file to use as the main image
@@ -98,7 +102,7 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
         caseType,
         imageUrl,
         aiCharacteristics,
-        reporterId: user.id, // Add the user's ID as reporterId
+        reporterId: user.id,
         status: 'open'
       }).returning();
 
