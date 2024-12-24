@@ -69,6 +69,8 @@ export default function Admin() {
 
   const { data: cases, isLoading } = useQuery<Case[]>({
     queryKey: ["/api/cases"],
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache the data
   });
 
   const handleStatusUpdate = async (caseId: number, newStatus: string) => {
@@ -132,7 +134,7 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 <AnimatePresence mode="wait">
-                  {cases?.filter(c => c.status === 'open').map(case_ => (
+                  {cases?.filter(c => c.status === 'open' || c.status === 'investigating').map(case_ => (
                     <motion.div 
                       key={case_.id} 
                       className="border-b py-4 last:border-0"
