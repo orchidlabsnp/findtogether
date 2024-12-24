@@ -15,6 +15,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
     queryKey: [`/api/cases/user/${address}`],
     retry: 3,
     retryDelay: 1000,
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
   const getStatusColor = (status: string | null) => {
@@ -32,7 +33,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center p-8">
+      <div className="flex justify-center items-center p-4 sm:p-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -40,7 +41,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center p-8">
+      <div className="flex justify-center items-center p-4 sm:p-8">
         <Card className="w-full">
           <CardContent className="pt-6">
             <p className="text-red-500">Error loading cases. Please try again later.</p>
@@ -51,7 +52,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -73,38 +74,41 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                   You haven't reported any cases yet.
                 </motion.p>
               ) : (
-                <div className="space-y-4">
+                <div className="grid gap-4">
                   {userCases.map((case_) => (
                     <motion.div
                       key={case_.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
-                      className="border rounded-lg p-4"
+                      className="border rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-medium">{case_.childName}</h3>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                        <div className="space-y-1">
+                          <h3 className="font-medium text-base sm:text-lg">{case_.childName}</h3>
+                          <p className="text-sm text-gray-600 line-clamp-2">{case_.description}</p>
+                        </div>
                         <Badge 
                           variant="outline"
-                          className={`${getStatusColor(case_.status)}`}
+                          className={`${getStatusColor(case_.status)} self-start sm:self-center`}
                         >
                           {case_.status?.toUpperCase() || 'PENDING'}
                         </Badge>
                       </div>
-                      <div className="space-y-2 text-sm text-gray-600">
+                      <div className="mt-4 space-y-2 text-sm text-gray-600">
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>{case_.location}</span>
+                          <MapPin className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{case_.location}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
+                          <Calendar className="h-4 w-4 flex-shrink-0" />
                           <span>
                             {case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}
                           </span>
                         </div>
                         {case_.status === 'investigating' && (
                           <div className="flex items-center gap-2 text-yellow-600">
-                            <Bell className="h-4 w-4" />
+                            <Bell className="h-4 w-4 flex-shrink-0" />
                             <span>Case is under active investigation</span>
                           </div>
                         )}

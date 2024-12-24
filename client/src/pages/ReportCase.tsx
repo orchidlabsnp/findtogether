@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Keep schema unchanged
 const reportCaseSchema = z.object({
   childName: z.string().min(1, "Child's name is required"),
   age: z.number().min(0).max(18),
@@ -74,7 +75,6 @@ export default function ReportCase({ address }: ReportCaseProps) {
         }
       }
 
-      // Add the reporter's address to the form data
       formData.append('reporterAddress', address);
 
       Object.entries(data).forEach(([key, value]) => {
@@ -114,63 +114,70 @@ export default function ReportCase({ address }: ReportCaseProps) {
   }
 
   return (
-    <div className="container mx-auto px-6 py-12">
+    <div className="min-h-screen w-full bg-background py-8 px-4 sm:px-6 lg:px-8">
       {showProfileCard && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
+          className="max-w-2xl mx-auto"
         >
-          <Card className="max-w-2xl mx-auto relative">
+          <Card className="relative shadow-lg">
             {isPending && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center"
+                className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg"
               >
-                <div className="flex flex-col items-center gap-4 p-4 rounded-lg">
+                <div className="flex flex-col items-center gap-4 p-4">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="text-sm font-medium">Processing your report...</p>
                 </div>
               </motion.div>
             )}
-            <CardHeader>
-              <CardTitle>Report Missing Child Case</CardTitle>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold text-center">Report Case</CardTitle>
+              <p className="text-center text-muted-foreground">
+                Please provide accurate information to help us locate the child
+              </p>
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="childName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Child's Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="childName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Child's Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} className="w-full" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="age"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Age</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                            value={field.value}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="age"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Age</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              value={field.value}
+                              className="w-full"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
@@ -179,7 +186,7 @@ export default function ReportCase({ address }: ReportCaseProps) {
                       <FormItem>
                         <FormLabel>Last Known Location</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -196,6 +203,7 @@ export default function ReportCase({ address }: ReportCaseProps) {
                           <Textarea
                             {...field}
                             placeholder="Please provide details about the circumstances..."
+                            className="min-h-[100px] w-full"
                           />
                         </FormControl>
                         <FormMessage />
@@ -210,9 +218,11 @@ export default function ReportCase({ address }: ReportCaseProps) {
                       <FormItem>
                         <FormLabel>Case Type</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select case type" />
-                          </SelectTrigger>
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select case type" />
+                            </SelectTrigger>
+                          </FormControl>
                           <SelectContent>
                             <SelectItem value="child_missing">Missing Child</SelectItem>
                             <SelectItem value="child_labour">Child Labour</SelectItem>
@@ -231,12 +241,13 @@ export default function ReportCase({ address }: ReportCaseProps) {
                       <FormItem>
                         <FormLabel>Contact Information</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Phone number or email" />
+                          <Input {...field} placeholder="Phone number or email" className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <div className="space-y-2">
                     <Label htmlFor="files">Upload Images/Videos</Label>
                     <Input
@@ -246,10 +257,10 @@ export default function ReportCase({ address }: ReportCaseProps) {
                       multiple
                       accept="image/*,video/*"
                       className="cursor-pointer file:mr-4 file:py-2 file:px-4
-                      file:rounded-full file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-primary file:text-primary-foreground
-                      hover:file:bg-primary/90"
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-primary file:text-primary-foreground
+                        hover:file:bg-primary/90"
                     />
                     <p className="text-sm text-muted-foreground">
                       You can upload multiple images and videos
@@ -267,10 +278,10 @@ export default function ReportCase({ address }: ReportCaseProps) {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
-                          className="absolute inset-0 flex items-center justify-center"
+                          className="flex items-center justify-center gap-2"
                         >
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Processing...
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Processing...</span>
                         </motion.div>
                       ) : (
                         <motion.span

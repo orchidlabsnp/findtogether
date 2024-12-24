@@ -1,4 +1,5 @@
 import { pgTable, text, serial, timestamp, integer, jsonb, boolean } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -21,15 +22,27 @@ export const cases = pgTable("cases", {
   location: text("location").notNull(),
   description: text("description").notNull(),
   contactInfo: text("contact_info").notNull(),
-  caseType: text("case_type"),
+  caseType: text("case_type").notNull(),
   imageUrl: text("image_url"),
-  reporterId: integer("reporter_id").references(() => users.id),
-  status: text("status").default("open"),
+  reporterId: integer("reporter_id").references(() => users.id).notNull(),
+  status: text("status").default("open").notNull(),
   aiCharacteristics: text("ai_characteristics"),
   matchConfidence: text("match_confidence"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
+
+// Add relations
+export const usersRelations = relations(users, ({ many }) => ({
+  cases: many(cases)
+}));
+
+export const casesRelations = relations(cases, ({ one }) => ({
+  reporter: one(users, {
+    fields: [cases.reporterId],
+    references: [users.id],
+  })
+}));
 
 // Character progression system
 export const characters = pgTable("characters", {
