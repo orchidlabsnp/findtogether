@@ -133,6 +133,7 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
 app.get("/api/cases/user/:address", async (req, res) => {
     try {
       const { address } = req.params;
+      console.log("Fetching cases for address:", address); // Debug log
 
       // Get or create user by address
       let user = await db.query.users.findFirst({
@@ -147,18 +148,22 @@ app.get("/api/cases/user/:address", async (req, res) => {
         user = newUser;
       }
 
+      console.log("User found/created:", user); // Debug log
+
       // Get cases for this user
       const userCases = await db.query.cases.findMany({
         where: eq(cases.reporterId, user.id),
         orderBy: (cases, { desc }) => [desc(cases.createdAt)]
       });
 
+      console.log("Found cases:", userCases.length); // Debug log
+
       res.json(userCases);
     } catch (error) {
       console.error("Error fetching user cases:", error);
       res.status(500).send("Failed to fetch user cases");
     }
-});
+  });
 
 app.post("/api/cases/search", upload.array("files"), async (req, res) => {
     console.log('Search request received:', {

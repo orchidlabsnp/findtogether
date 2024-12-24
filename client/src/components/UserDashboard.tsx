@@ -12,7 +12,7 @@ interface UserDashboardProps {
 
 export default function UserDashboard({ address }: UserDashboardProps) {
   const { data: userCases, isLoading, error } = useQuery<Case[]>({
-    queryKey: [`/api/cases/user/${address}`],
+    queryKey: [`/api/cases/user/${address.toLowerCase()}`],
     retry: 3,
     retryDelay: 1000,
     refetchInterval: 5000, // Refresh every 5 seconds
