@@ -12,7 +12,7 @@ interface UserDashboardProps {
 
 export default function UserDashboard({ address }: UserDashboardProps) {
   const { data: userCases, isLoading } = useQuery<Case[]>({
-    queryKey: ["/api/cases/user", address],
+    queryKey: [`/api/cases/user/${address}`],
     refetchInterval: 5000, // Refetch every 5 seconds to keep data fresh
     refetchOnWindowFocus: true, // Refetch when window gains focus
   });
@@ -55,7 +55,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
           </CardHeader>
           <CardContent>
             <AnimatePresence mode="wait">
-              {userCases?.length === 0 ? (
+              {!userCases || userCases.length === 0 ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -66,7 +66,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                 </motion.p>
               ) : (
                 <div className="space-y-4">
-                  {userCases?.map((case_) => (
+                  {userCases.map((case_) => (
                     <motion.div
                       key={case_.id}
                       initial={{ opacity: 0, x: -20 }}
