@@ -33,6 +33,19 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
   const [isContactLoading, setIsContactLoading] = useState(false);
   const [isSaveLoading, setIsSaveLoading] = useState(false);
 
+  const getStatusColor = (status: string | null) => {
+    switch (status?.toLowerCase()) {
+      case 'open':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'investigating':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'resolved':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   const handleContact = async () => {
     setIsContactLoading(true);
     try {
@@ -85,9 +98,17 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
               </div>
             )}
           </motion.div>
-          <Badge className="absolute top-4 right-4 bg-slate-800 z-10">
-            Case #{case_.id}
-          </Badge>
+          <div className="absolute top-4 right-4 flex gap-2 z-10">
+            <Badge className="bg-slate-800">
+              Case #{case_.id}
+            </Badge>
+            <Badge 
+              className={`border px-2 py-1 rounded-full ${getStatusColor(case_.status)}`}
+              variant="outline"
+            >
+              {case_.status?.toUpperCase() || 'PENDING'}
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="p-6">
           <motion.div 
@@ -103,9 +124,6 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
               </p>
             </div>
             <div className="flex gap-2">
-              <Badge variant={case_.status === 'open' ? 'destructive' : 'default'}>
-                {case_.status?.toUpperCase() || 'OPEN'}
-              </Badge>
               {case_.similarity !== undefined && (
                 <Badge variant={case_.similarity > 0.7 ? 'default' : 'secondary'}>
                   {Math.round(case_.similarity * 100)}% Match
