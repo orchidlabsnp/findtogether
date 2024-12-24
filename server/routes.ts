@@ -163,7 +163,7 @@ app.get("/api/cases/user/:address", async (req, res) => {
 app.post("/api/cases/search", upload.array("files"), async (req, res) => {
     console.log('Search request received:', {
       searchType: req.body.searchType,
-      hasFiles: req.files ? req.files.length > 0 : false,
+      hasFiles: req.files && (req.files as Express.Multer.File[]).length > 0,
       query: req.body.query
     });
 
