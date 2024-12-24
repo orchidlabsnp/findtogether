@@ -33,11 +33,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative h-[600px] flex items-center">
         <div className="absolute inset-0">
-          <img
-            src="https://images.unsplash.com/photo-1489710437720-ebb67ec84dd2"
-            alt="Happy family"
-            className="w-full h-full object-cover opacity-20"
-          />
+          <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 opacity-20" />
         </div>
 
         <motion.div 
@@ -73,6 +69,8 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="space-y-8"
           >
+            <h2 className="text-3xl font-bold text-gray-900">Recent Cases</h2>
+
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
