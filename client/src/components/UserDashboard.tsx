@@ -3,7 +3,7 @@ import { Case } from "@db/schema";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Calendar, MapPin, Loader2 } from "lucide-react";
+import { Bell, Calendar, MapPin, Loader2, Tag } from "lucide-react";
 import { format } from "date-fns";
 
 interface UserDashboardProps {
@@ -33,6 +33,15 @@ export default function UserDashboard({ address }: UserDashboardProps) {
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
+
+  const getCaseTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'child_missing': 'Missing Child',
+      'child_labour': 'Child Labour',
+      'child_harassment': 'Child Harassment'
+    };
+    return labels[type] || type;
   };
 
   if (isLoading) {
@@ -90,16 +99,28 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                     >
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                         <div className="space-y-1">
-                          <h3 className="font-medium text-base sm:text-lg">Case #{case_.id}: {case_.childName}</h3>
-                          <p className="text-sm text-gray-600 line-clamp-2">{case_.description}</p>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-base sm:text-lg">Case #{case_.id}: {case_.childName}</h3>
+                            <Badge 
+                              variant="outline"
+                              className={`${getStatusColor(case_.status)}`}
+                            >
+                              {case_.status?.toUpperCase() || 'PENDING'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Tag className="h-4 w-4" />
+                            <span>{getCaseTypeLabel(case_.caseType)}</span>
+                          </div>
                         </div>
-                        <Badge 
-                          variant="outline"
-                          className={`${getStatusColor(case_.status)} self-start sm:self-center`}
-                        >
-                          {case_.status?.toUpperCase() || 'PENDING'}
-                        </Badge>
                       </div>
+
+                      <div className="mt-3">
+                        <p className="text-sm text-gray-600 line-clamp-2 hover:line-clamp-none transition-all duration-200">
+                          {case_.description}
+                        </p>
+                      </div>
+
                       <div className="mt-4 space-y-2 text-sm text-gray-600">
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 flex-shrink-0" />
@@ -118,6 +139,16 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                           </div>
                         )}
                       </div>
+
+                      {case_.imageUrl && (
+                        <div className="mt-4">
+                          <img 
+                            src={case_.imageUrl} 
+                            alt={`Case ${case_.id}`}
+                            className="rounded-md w-full max-w-xs object-cover"
+                          />
+                        </div>
+                      )}
                     </motion.div>
                   ))}
                 </div>

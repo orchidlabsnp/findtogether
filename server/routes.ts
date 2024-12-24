@@ -158,11 +158,11 @@ app.get("/api/cases/user/:address", async (req, res) => {
 
       console.log("Found user:", user);
 
-      // Get cases for this user
-      const userCases = await db.query.cases.findMany({
-        where: eq(cases.reporterId, user.id),
-        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-      });
+      // Get cases for this user with all details
+      const userCases = await db.select()
+        .from(cases)
+        .where(eq(cases.reporterId, user.id))
+        .orderBy(cases.createdAt, 'desc');
 
       console.log("Found cases for user:", userCases.length);
 
