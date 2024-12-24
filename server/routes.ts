@@ -326,6 +326,32 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add PUT endpoint for updating case status
+  app.put("/api/cases/:id/status", async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status || !['open', 'investigating', 'resolved'].includes(status)) {
+      return res.status(400).send("Invalid status value");
+    }
+
+    try {
+      const [updatedCase] = await db.update(cases)
+        .set({ status })
+        .where(eq(cases.id, parseInt(id)))
+        .returning();
+
+      if (!updatedCase) {
+        return res.status(404).send("Case not found");
+      }
+
+      res.json(updatedCase);
+    } catch (error) {
+      console.error("Error updating case status:", error);
+      res.status(500).send("Failed to update case status");
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Initialize notification service

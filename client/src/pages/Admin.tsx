@@ -28,6 +28,7 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updatingCaseId, setUpdatingCaseId] = useState<number | null>(null);
 
   useEffect(() => {
     // Check if MetaMask is installed
@@ -72,6 +73,7 @@ export default function Admin() {
 
   const handleStatusUpdate = async (caseId: number, newStatus: string) => {
     setIsUpdating(true);
+    setUpdatingCaseId(caseId);
     try {
       const response = await fetch(`/api/cases/${caseId}/status`, {
         method: 'PUT',
@@ -101,6 +103,7 @@ export default function Admin() {
       });
     } finally {
       setIsUpdating(false);
+      setUpdatingCaseId(null);
     }
   };
 
@@ -147,10 +150,14 @@ export default function Admin() {
                         <Select
                           value={case_.status || undefined}
                           onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                          disabled={isUpdating}
+                          disabled={isUpdating && updatingCaseId === case_.id}
                         >
                           <SelectTrigger className="w-32">
-                            <SelectValue placeholder="Status" />
+                            {isUpdating && updatingCaseId === case_.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <SelectValue placeholder="Status" />
+                            )}
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="open">Open</SelectItem>
@@ -190,10 +197,14 @@ export default function Admin() {
                         <Select
                           value={case_.status || undefined}
                           onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                          disabled={isUpdating}
+                          disabled={isUpdating && updatingCaseId === case_.id}
                         >
                           <SelectTrigger className="w-32">
-                            <SelectValue placeholder="Status" />
+                            {isUpdating && updatingCaseId === case_.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <SelectValue placeholder="Status" />
+                            )}
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="open">Open</SelectItem>
