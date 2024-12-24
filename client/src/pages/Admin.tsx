@@ -30,6 +30,7 @@ export default function Admin() {
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updatingCaseId, setUpdatingCaseId] = useState<number | null>(null);
+  const [expandedCases, setExpandedCases] = useState<number[]>([]);
 
   useEffect(() => {
     if (typeof window.ethereum === 'undefined') {
@@ -108,143 +109,105 @@ export default function Admin() {
     }
   };
 
+  const toggleCaseExpansion = (caseId: number) => {
+    setExpandedCases(prev => 
+      prev.includes(caseId) 
+        ? prev.filter(id => id !== caseId)
+        : [...prev, caseId]
+    );
+  };
+
   if (!currentAddress || currentAddress.toLowerCase() !== ADMIN_ADDRESS.toLowerCase()) {
     return null;
   }
 
+  const renderCase = (case_: Case) => (
+    <motion.div 
+      key={case_.id} 
+      className="border-b py-4 last:border-0"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4 px-2">
+        <div className="space-y-1 min-w-0 flex-1">
+          <h3 className="font-semibold text-base sm:text-lg truncate">Case #{case_.id}: {case_.childName}</h3>
+          <p className="text-sm text-gray-600 truncate">Location: {case_.location}</p>
+          <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
+        </div>
+        <Select
+          value={case_.status || undefined}
+          onValueChange={(value) => handleStatusUpdate(case_.id, value)}
+          disabled={isUpdating && updatingCaseId === case_.id}
+        >
+          <SelectTrigger className="w-full sm:w-32 shrink-0">
+            {isUpdating && updatingCaseId === case_.id ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <SelectValue placeholder="Status" />
+            )}
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="investigating">Investigating</SelectItem>
+            <SelectItem value="resolved">Resolved</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="mt-2 sm:mt-4 px-2">
+        <p className={`text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed transition-all duration-200 ${expandedCases.includes(case_.id) ? '' : 'line-clamp-3'}`}>
+          {case_.description}
+        </p>
+        <button 
+          className="text-xs text-primary mt-1 hover:underline focus:outline-none"
+          onClick={() => toggleCaseExpansion(case_.id)}
+        >
+          Show {expandedCases.includes(case_.id) ? 'less' : 'more'}
+        </button>
+      </div>
+    </motion.div>
+  );
+
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
-      <div className="max-w-[100vw] px-2 sm:px-4 lg:px-6 py-6 sm:py-8">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="space-y-4 sm:space-y-6 w-full"
+          className="space-y-4 sm:space-y-6"
         >
-          <h1 className="text-2xl sm:text-3xl font-bold px-2">Admin Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="grid gap-4 sm:gap-6 w-full">
-              <Card className="w-full overflow-hidden">
-                <CardHeader className="space-y-1">
+            <div className="grid gap-4 sm:gap-6">
+              {/* Open and Investigating Cases */}
+              <Card>
+                <CardHeader>
                   <CardTitle className="text-xl sm:text-2xl">Pending Cases</CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-x-auto">
+                <CardContent>
                   <AnimatePresence mode="wait">
-                    {cases?.filter((c: Case) => c.status === 'open' || c.status === 'investigating').map((case_: Case) => (
-                      <motion.div 
-                        key={case_.id} 
-                        className="border-b py-4 last:border-0"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4 px-2">
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <h3 className="font-semibold text-base sm:text-lg truncate">Case #{case_.id}: {case_.childName}</h3>
-                            <p className="text-sm text-gray-600 truncate">Location: {case_.location}</p>
-                            <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
-                          </div>
-                          <Select
-                            value={case_.status || undefined}
-                            onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                            disabled={isUpdating && updatingCaseId === case_.id}
-                          >
-                            <SelectTrigger className="w-full sm:w-32 shrink-0">
-                              {isUpdating && updatingCaseId === case_.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <SelectValue placeholder="Status" />
-                              )}
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="open">Open</SelectItem>
-                              <SelectItem value="investigating">Investigating</SelectItem>
-                              <SelectItem value="resolved">Resolved</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="mt-2 sm:mt-4 px-2">
-                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer max-w-full">
-                            {case_.description}
-                          </p>
-                          <button 
-                            className="text-xs text-primary mt-1 hover:underline focus:outline-none sm:hidden"
-                            onClick={(e) => {
-                              const target = e.currentTarget.previousElementSibling as HTMLParagraphElement;
-                              target.classList.toggle('line-clamp-3');
-                            }}
-                          >
-                            Read {case_.description && case_.description.length > 150 ? 'more' : 'less'}
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
+                    {cases
+                      ?.filter(c => c.status === 'open' || c.status === 'investigating')
+                      .map(renderCase)}
                   </AnimatePresence>
                 </CardContent>
               </Card>
 
-              <Card className="w-full overflow-hidden">
-                <CardHeader className="space-y-1">
+              {/* Resolved Cases */}
+              <Card>
+                <CardHeader>
                   <CardTitle className="text-xl sm:text-2xl">Resolved Cases</CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-x-auto">
+                <CardContent>
                   <AnimatePresence mode="wait">
-                    {cases?.filter((c: Case) => c.status === 'resolved').map((case_: Case) => (
-                      <motion.div 
-                        key={case_.id} 
-                        className="border-b py-4 last:border-0"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4 px-2">
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <h3 className="font-semibold text-base sm:text-lg truncate">Case #{case_.id}: {case_.childName}</h3>
-                            <p className="text-sm text-gray-600 truncate">Location: {case_.location}</p>
-                            <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
-                          </div>
-                          <Select
-                            value={case_.status || undefined}
-                            onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                            disabled={isUpdating && updatingCaseId === case_.id}
-                          >
-                            <SelectTrigger className="w-full sm:w-32 shrink-0">
-                              {isUpdating && updatingCaseId === case_.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <SelectValue placeholder="Status" />
-                              )}
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="open">Open</SelectItem>
-                              <SelectItem value="investigating">Investigating</SelectItem>
-                              <SelectItem value="resolved">Resolved</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="mt-2 sm:mt-4 px-2">
-                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer max-w-full">
-                            {case_.description}
-                          </p>
-                          <button 
-                            className="text-xs text-primary mt-1 hover:underline focus:outline-none sm:hidden"
-                            onClick={(e) => {
-                              const target = e.currentTarget.previousElementSibling as HTMLParagraphElement;
-                              target.classList.toggle('line-clamp-3');
-                            }}
-                          >
-                            Read {case_.description && case_.description.length > 150 ? 'more' : 'less'}
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
+                    {cases?.filter(c => c.status === 'resolved').map(renderCase)}
                   </AnimatePresence>
                 </CardContent>
               </Card>

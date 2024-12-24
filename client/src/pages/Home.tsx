@@ -3,15 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Case } from "@db/schema";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Home() {
-  const { data: cases, isLoading } = useQuery<Case[]>({
+  const { data: cases, isLoading, error } = useQuery<Case[]>({
     queryKey: ["/api/cases"],
     refetchInterval: 5000, // Refresh every 5 seconds
+    retry: false,
   });
 
   const getStatusColor = (status: string | null) => {
@@ -27,14 +28,16 @@ export default function Home() {
     }
   };
 
+  // Type-safe case filtering
   const groupedCases = {
-    open: cases?.filter(c => c.status === 'open') || [],
-    investigating: cases?.filter(c => c.status === 'investigating') || [],
-    resolved: cases?.filter(c => c.status === 'resolved') || [],
+    open: cases?.filter(c => c.status === 'open') ?? [],
+    investigating: cases?.filter(c => c.status === 'investigating') ?? [],
+    resolved: cases?.filter(c => c.status === 'resolved') ?? []
   };
 
   return (
     <div className="min-h-screen">
+      {/* Hero Section */}
       <section className="relative h-[600px] flex items-center">
         <div className="absolute inset-0">
           <img
@@ -68,6 +71,7 @@ export default function Home() {
         </motion.div>
       </section>
 
+      {/* Cases Section */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4 sm:px-6">
           <motion.div
@@ -80,8 +84,12 @@ export default function Home() {
               <div className="flex justify-center items-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
+            ) : error ? (
+              <div className="text-center text-red-600">
+                Failed to load cases. Please try again later.
+              </div>
             ) : (
-              <>
+              <div className="space-y-12">
                 {/* Open Cases */}
                 {groupedCases.open.length > 0 && (
                   <div className="space-y-4">
@@ -92,7 +100,6 @@ export default function Home() {
                           key={case_.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="relative"
                         >
                           <Card>
                             <CardContent className="p-6">
@@ -111,7 +118,9 @@ export default function Home() {
                               <p className="text-sm text-gray-600 line-clamp-2 mb-4">{case_.description}</p>
                               <div className="flex items-center text-sm text-gray-500">
                                 <Calendar className="h-4 w-4 mr-1" />
-                                <span>{case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}</span>
+                                <span>
+                                  {case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}
+                                </span>
                               </div>
                             </CardContent>
                           </Card>
@@ -131,7 +140,6 @@ export default function Home() {
                           key={case_.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="relative"
                         >
                           <Card>
                             <CardContent className="p-6">
@@ -150,7 +158,9 @@ export default function Home() {
                               <p className="text-sm text-gray-600 line-clamp-2 mb-4">{case_.description}</p>
                               <div className="flex items-center text-sm text-gray-500">
                                 <Calendar className="h-4 w-4 mr-1" />
-                                <span>{case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}</span>
+                                <span>
+                                  {case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}
+                                </span>
                               </div>
                             </CardContent>
                           </Card>
@@ -170,7 +180,6 @@ export default function Home() {
                           key={case_.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="relative"
                         >
                           <Card>
                             <CardContent className="p-6">
@@ -189,7 +198,9 @@ export default function Home() {
                               <p className="text-sm text-gray-600 line-clamp-2 mb-4">{case_.description}</p>
                               <div className="flex items-center text-sm text-gray-500">
                                 <Calendar className="h-4 w-4 mr-1" />
-                                <span>{case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}</span>
+                                <span>
+                                  {case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}
+                                </span>
                               </div>
                             </CardContent>
                           </Card>
@@ -198,12 +209,22 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-              </>
+
+                {/* No Cases Message */}
+                {!groupedCases.open.length && 
+                 !groupedCases.investigating.length && 
+                 !groupedCases.resolved.length && (
+                  <div className="text-center text-gray-500 py-12">
+                    No cases found at the moment.
+                  </div>
+                )}
+              </div>
             )}
           </motion.div>
         </div>
       </section>
 
+      {/* Features Section */}
       <section className="py-20 bg-blue-50">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8">
