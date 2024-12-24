@@ -169,7 +169,20 @@ export default function Admin() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <p className="text-sm text-gray-700 line-clamp-3 sm:line-clamp-none">{case_.description}</p>
+                        <div className="mt-2 sm:mt-4">
+                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer">
+                            {case_.description}
+                          </p>
+                          <button 
+                            className="text-xs text-primary mt-1 hover:underline focus:outline-none sm:hidden"
+                            onClick={(e) => {
+                              const target = e.currentTarget.previousElementSibling as HTMLParagraphElement;
+                              target.classList.toggle('line-clamp-3');
+                            }}
+                          >
+                            Read {case_.description && case_.description.length > 150 ? 'more' : 'less'}
+                          </button>
+                        </div>
                       </motion.div>
                     ))}
                   </AnimatePresence>
@@ -216,7 +229,20 @@ export default function Admin() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <p className="text-sm text-gray-700 line-clamp-3 sm:line-clamp-none">{case_.description}</p>
+                        <div className="mt-2 sm:mt-4">
+                          <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer">
+                            {case_.description}
+                          </p>
+                          <button 
+                            className="text-xs text-primary mt-1 hover:underline focus:outline-none sm:hidden"
+                            onClick={(e) => {
+                              const target = e.currentTarget.previousElementSibling as HTMLParagraphElement;
+                              target.classList.toggle('line-clamp-3');
+                            }}
+                          >
+                            Read {case_.description && case_.description.length > 150 ? 'more' : 'less'}
+                          </button>
+                        </div>
                       </motion.div>
                     ))}
                   </AnimatePresence>
