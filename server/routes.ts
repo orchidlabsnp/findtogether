@@ -128,9 +128,39 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
       console.error("Error creating case:", error);
       res.status(500).send("Failed to create case");
     }
-  });
+});
 
-  app.post("/api/cases/search", upload.array("files"), async (req, res) => {
+app.get("/api/cases/user/:address", async (req, res) => {
+    try {
+      const { address } = req.params;
+
+      // Get or create user by address
+      let user = await db.query.users.findFirst({
+        where: eq(users.address, address)
+      });
+
+      if (!user) {
+        // Create new user if doesn't exist
+        const [newUser] = await db.insert(users)
+          .values({ address })
+          .returning();
+        user = newUser;
+      }
+
+      // Get cases for this user
+      const userCases = await db.query.cases.findMany({
+        where: eq(cases.reporterId, user.id),
+        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+      });
+
+      res.json(userCases);
+    } catch (error) {
+      console.error("Error fetching user cases:", error);
+      res.status(500).send("Failed to fetch user cases");
+    }
+});
+
+app.post("/api/cases/search", upload.array("files"), async (req, res) => {
     console.log('Search request received:', {
       searchType: req.body.searchType,
       hasFiles: req.files ? req.files.length > 0 : false,
@@ -360,36 +390,6 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
     } catch (error) {
       console.error("Error updating case status:", error);
       res.status(500).send("Failed to update case status");
-    }
-  });
-
-  app.get("/api/cases/user/:address", async (req, res) => {
-    try {
-      const { address } = req.params;
-
-      // Get or create user by address
-      let user = await db.query.users.findFirst({
-        where: eq(users.address, address)
-      });
-
-      if (!user) {
-        // Create new user if doesn't exist
-        const [newUser] = await db.insert(users)
-          .values({ address })
-          .returning();
-        user = newUser;
-      }
-
-      // Get cases for this user
-      const userCases = await db.query.cases.findMany({
-        where: eq(cases.reporterId, user.id),
-        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-      });
-
-      res.json(userCases);
-    } catch (error) {
-      console.error("Error fetching user cases:", error);
-      res.status(500).send("Failed to fetch user cases");
     }
   });
 
