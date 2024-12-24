@@ -64,8 +64,8 @@ export default function UserDashboard({ address }: UserDashboardProps) {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center p-2">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="flex justify-center items-center p-4 sm:p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -73,46 +73,46 @@ export default function UserDashboard({ address }: UserDashboardProps) {
   if (error) {
     console.error("Error fetching user cases:", error);
     return (
-      <div className="text-center p-2 text-red-600">
-        <AlertCircle className="h-6 w-6 mx-auto mb-1" />
-        <p className="text-xs">Error loading cases. Please try again later.</p>
+      <div className="text-center p-4 text-red-600">
+        <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+        <p>Error loading cases. Please try again later.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 px-2">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <Card className="shadow-sm max-w-xs mx-auto">
-          <CardHeader className="p-2">
-            <CardTitle className="text-xs font-bold flex items-center gap-1">
-              <Bell className="h-3 w-3 text-primary" />
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
               Your Reported Cases
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-2">
+          <CardContent>
             <AnimatePresence mode="wait">
               {!userCases?.length ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-center py-2 bg-gray-50 rounded"
+                  className="text-center py-8 bg-gray-50 rounded-lg"
                 >
-                  <div className="flex flex-col items-center gap-1">
-                    <AlertCircle className="h-6 w-6 text-gray-400" />
-                    <p className="text-xs text-gray-600 font-medium">No cases reported yet</p>
-                    <p className="text-xs text-gray-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <AlertCircle className="h-12 w-12 text-gray-400" />
+                    <p className="text-gray-600 font-medium">No cases reported yet</p>
+                    <p className="text-sm text-gray-500">
                       Your reported cases will appear here
                     </p>
                   </div>
                 </motion.div>
               ) : (
-                <div className="grid gap-2">
+                <div className="grid gap-4">
                   {userCases.map((case_, index) => (
                     <motion.div
                       key={case_.id}
@@ -121,7 +121,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ delay: index * 0.1 }}
                     >
-                      <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200 max-w-xs mx-auto">
+                      <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200 max-w-xs">
                         <CardContent className="p-2">
                           <div className="flex flex-col space-y-1.5">
                             {/* Header with Case ID and Status */}
