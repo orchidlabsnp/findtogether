@@ -146,23 +146,22 @@ app.get("/api/cases/user/:address", async (req, res) => {
       const normalizedAddress = address.toLowerCase();
       console.log("Fetching cases for normalized address:", normalizedAddress);
 
-      // Get user by normalized address
-      let user = await db.query.users.findFirst({
+      // First, find the user by normalized address
+      const user = await db.query.users.findFirst({
         where: eq(users.address, normalizedAddress)
       });
 
       if (!user) {
         console.log("No user found for address:", normalizedAddress);
-        return res.json([]); // Return empty array if no user found
+        return res.json([]);
       }
 
       console.log("Found user:", user);
 
-      // Get cases for this user with all details
+      // Get cases for this user with all details using a direct query
       const userCases = await db.select()
         .from(cases)
-        .where(eq(cases.reporterId, user.id))
-        .orderBy(cases.createdAt, 'desc');
+        .where(eq(cases.reporterId, user.id));
 
       console.log("Found cases for user:", userCases.length);
 
@@ -171,9 +170,9 @@ app.get("/api/cases/user/:address", async (req, res) => {
       console.error("Error fetching user cases:", error);
       res.status(500).send("Failed to fetch user cases");
     }
-});
+  });
 
-app.post("/api/cases/search", upload.array("files"), async (req, res) => {
+  app.post("/api/cases/search", upload.array("files"), async (req, res) => {
     console.log('Search request received:', {
       searchType: req.body.searchType,
       hasFiles: req.files ? req.files.length > 0 : false,

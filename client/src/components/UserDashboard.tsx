@@ -14,12 +14,12 @@ export default function UserDashboard({ address }: UserDashboardProps) {
   // Normalize address to lowercase for consistent comparison
   const normalizedAddress = address.toLowerCase();
 
-  const { data: userCases, isLoading, error } = useQuery<Case[]>({
+  const { data: userCases, isLoading } = useQuery<Case[]>({
     queryKey: [`/api/cases/user/${normalizedAddress}`],
     retry: 3,
     retryDelay: 1000,
     refetchInterval: 5000, // Refresh every 5 seconds
-    staleTime: 0, // Consider data stale immediately to ensure fresh data on mount
+    staleTime: 0, // Consider data stale immediately
   });
 
   const getStatusColor = (status: string | null) => {
@@ -52,19 +52,6 @@ export default function UserDashboard({ address }: UserDashboardProps) {
     );
   }
 
-  if (error) {
-    console.error('Dashboard error:', error);
-    return (
-      <div className="flex justify-center items-center p-4 sm:p-8">
-        <Card className="w-full">
-          <CardContent className="pt-6">
-            <p className="text-red-500">Error loading cases. Please try again later.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4 sm:space-y-6 px-4 sm:px-6">
       <motion.div
@@ -78,7 +65,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
           </CardHeader>
           <CardContent>
             <AnimatePresence mode="wait">
-              {!userCases || userCases.length === 0 ? (
+              {!userCases?.length ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -89,43 +76,36 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                 </motion.p>
               ) : (
                 <div className="grid gap-4">
-                  {userCases.map((case_) => (
+                  {userCases.map((case_, index) => (
                     <motion.div
                       key={case_.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.1 }}
                       className="border rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium text-base sm:text-lg">Case #{case_.id}: {case_.childName}</h3>
-                            <Badge 
-                              variant="outline"
-                              className={`${getStatusColor(case_.status)}`}
-                            >
-                              {case_.status?.toUpperCase() || 'PENDING'}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Tag className="h-4 w-4" />
-                            <span>{getCaseTypeLabel(case_.caseType)}</span>
-                          </div>
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <h3 className="font-semibold text-base sm:text-lg truncate">Case #{case_.id}: {case_.childName}</h3>
+                          <p className="text-sm text-gray-600 truncate">Location: {case_.location}</p>
+                          <p className="text-sm text-gray-600">Type: {getCaseTypeLabel(case_.caseType)}</p>
                         </div>
+                        <Badge 
+                          variant="outline"
+                          className={`${getStatusColor(case_.status)}`}
+                        >
+                          {case_.status?.toUpperCase() || 'PENDING'}
+                        </Badge>
                       </div>
 
-                      <div className="mt-3">
-                        <p className="text-sm text-gray-600 line-clamp-2 hover:line-clamp-none transition-all duration-200">
+                      <div className="mt-2 sm:mt-4">
+                        <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words leading-relaxed sm:leading-loose line-clamp-3 hover:line-clamp-none transition-all duration-200 cursor-pointer">
                           {case_.description}
                         </p>
                       </div>
 
                       <div className="mt-4 space-y-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate">{case_.location}</span>
-                        </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 flex-shrink-0" />
                           <span>
