@@ -9,6 +9,7 @@ import { PlusCircle, BookmarkPlus, User as UserIcon, Loader2 } from "lucide-reac
 import { useState } from "react";
 import type { User } from "@db/schema";
 import { motion, AnimatePresence } from "framer-motion";
+import UserDashboard from "./UserDashboard";
 
 interface ProfileCardProps {
   address: string;
@@ -49,12 +50,12 @@ export default function ProfileCard({ address, user }: ProfileCardProps) {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Profile</DialogTitle>
           </DialogHeader>
 
-          <div className="py-6">
+          <div className="py-6 space-y-8">
             <motion.div 
               className="flex items-center justify-center mb-6"
               initial={{ scale: 0.8, opacity: 0 }}
@@ -130,6 +131,8 @@ export default function ProfileCard({ address, user }: ProfileCardProps) {
                 </AnimatePresence>
               </Button>
             </motion.div>
+
+            <UserDashboard address={address} />
           </div>
         </DialogContent>
       </Dialog>

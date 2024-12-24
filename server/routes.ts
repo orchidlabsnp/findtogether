@@ -349,6 +349,30 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/cases/user/:address", async (req, res) => {
+    try {
+      const { address } = req.params;
+      const user = await db.query.users.findFirst({
+        where: eq(users.address, address)
+      });
+
+      if (!user) {
+        return res.status(404).send("User not found");
+      }
+
+      const userCases = await db.query.cases.findMany({
+        where: eq(cases.reporterId, user.id),
+        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+      });
+
+      res.json(userCases);
+    } catch (error) {
+      console.error("Error fetching user cases:", error);
+      res.status(500).send("Failed to fetch user cases");
+    }
+  });
+
+
   const httpServer = createServer(app);
   
   // Initialize notification service
