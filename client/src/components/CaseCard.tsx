@@ -30,16 +30,49 @@ interface CaseCardProps {
 }
 
 export default function CaseCard({ case: case_ }: CaseCardProps) {
+  const [isContactLoading, setIsContactLoading] = useState(false);
+  const [isSaveLoading, setIsSaveLoading] = useState(false);
+
+  const handleContact = async () => {
+    setIsContactLoading(true);
+    try {
+      // Contact functionality here
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated delay
+    } finally {
+      setIsContactLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaveLoading(true);
+    try {
+      // Save functionality here
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated delay
+    } finally {
+      setIsSaveLoading(false);
+    }
+  };
+
   return (
-    <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+    <motion.div 
+      whileHover={{ scale: 1.02 }} 
+      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+    >
       <Card className="overflow-hidden">
         <CardHeader className="relative h-56 p-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gray-100">
+          <motion.div 
+            className="absolute inset-0 bg-gray-100"
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.3 }}
+          >
             {case_.imageUrl ? (
               <img
                 src={case_.imageUrl}
                 alt={case_.childName}
-                className="w-full h-full object-cover transition-transform hover:scale-105"
+                className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.onerror = null;
@@ -51,13 +84,18 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
                 <span className="text-gray-400">No image available</span>
               </div>
             )}
-          </div>
+          </motion.div>
           <Badge className="absolute top-4 right-4 bg-slate-800 z-10">
             Case #{case_.id}
           </Badge>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="flex justify-between items-start mb-4">
+          <motion.div 
+            className="flex justify-between items-start mb-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <div>
               <h3 className="text-xl font-semibold mb-1">Name: {case_.childName}</h3>
               <p className="text-sm text-gray-500">
@@ -74,9 +112,14 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
                 </Badge>
               )}
             </div>
-          </div>
+          </motion.div>
 
-          <div className="space-y-3 mb-6">
+          <motion.div 
+            className="space-y-3 mb-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <MapPin className="h-4 w-4" />
               <span>Last location: {case_.location}</span>
@@ -103,41 +146,72 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
               <Info className="h-4 w-4 inline mr-2" />
               About: {case_.description}
             </p>
-          </div>
+          </motion.div>
 
-          <div className="flex gap-2">
+          <motion.div 
+            className="flex gap-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
             <Button 
               variant="outline" 
               className="flex-1 relative" 
-              onClick={() => {
-                // Contact functionality would go here
-              }}
+              onClick={handleContact}
+              disabled={isContactLoading}
             >
               <AnimatePresence mode="wait">
-                <motion.div
-                  className="flex items-center justify-center"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  Contact
-                </motion.div>
+                {isContactLoading ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center justify-center"
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Contact
+                  </motion.div>
+                )}
               </AnimatePresence>
             </Button>
+
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="flex-1 relative">
+                <Button 
+                  className="flex-1 relative"
+                  onClick={handleSave}
+                  disabled={isSaveLoading}
+                >
                   <AnimatePresence mode="wait">
-                    <motion.div
-                      className="flex items-center justify-center"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      <Heart className="h-4 w-4 mr-2" />
-                      Save Child
-                    </motion.div>
+                    {isSaveLoading ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center justify-center"
+                      >
+                        <Heart className="h-4 w-4 mr-2" />
+                        Save Child
+                      </motion.div>
+                    )}
                   </AnimatePresence>
                 </Button>
               </DialogTrigger>
@@ -148,7 +222,12 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
                     Emergency contacts and details for {case_.childName}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <motion.div 
+                  className="space-y-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
                   <div>
                     <h3 className="text-sm font-semibold mb-2">Primary Contact</h3>
                     <div className="space-y-2 text-sm">
@@ -192,10 +271,10 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               </DialogContent>
             </Dialog>
-          </div>
+          </motion.div>
         </CardContent>
       </Card>
     </motion.div>
