@@ -113,116 +113,119 @@ export default function Admin() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-6"
+        >
+          <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Cases</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AnimatePresence mode="wait">
-                  {cases?.filter((c: Case) => c.status === 'open' || c.status === 'investigating').map((case_: Case) => (
-                    <motion.div 
-                      key={case_.id} 
-                      className="border-b py-4 last:border-0"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-semibold">Case #{case_.id}: {case_.childName}</h3>
-                          <p className="text-sm text-gray-600">Location: {case_.location}</p>
-                          <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="grid gap-6">
+              <Card>
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-xl sm:text-2xl">Pending Cases</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AnimatePresence mode="wait">
+                    {cases?.filter((c: Case) => c.status === 'open' || c.status === 'investigating').map((case_: Case) => (
+                      <motion.div 
+                        key={case_.id} 
+                        className="border-b py-4 last:border-0"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4">
+                          <div className="space-y-1">
+                            <h3 className="font-semibold text-base sm:text-lg">Case #{case_.id}: {case_.childName}</h3>
+                            <p className="text-sm text-gray-600">Location: {case_.location}</p>
+                            <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
+                          </div>
+                          <Select
+                            value={case_.status || undefined}
+                            onValueChange={(value) => handleStatusUpdate(case_.id, value)}
+                            disabled={isUpdating && updatingCaseId === case_.id}
+                          >
+                            <SelectTrigger className="w-full sm:w-32">
+                              {isUpdating && updatingCaseId === case_.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <SelectValue placeholder="Status" />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="open">Open</SelectItem>
+                              <SelectItem value="investigating">Investigating</SelectItem>
+                              <SelectItem value="resolved">Resolved</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <Select
-                          value={case_.status || undefined}
-                          onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                          disabled={isUpdating && updatingCaseId === case_.id}
-                        >
-                          <SelectTrigger className="w-32">
-                            {isUpdating && updatingCaseId === case_.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <SelectValue placeholder="Status" />
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="open">Open</SelectItem>
-                            <SelectItem value="investigating">Investigating</SelectItem>
-                            <SelectItem value="resolved">Resolved</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <p className="text-sm">{case_.description}</p>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </CardContent>
-            </Card>
+                        <p className="text-sm text-gray-700 line-clamp-3 sm:line-clamp-none">{case_.description}</p>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Resolved Cases</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AnimatePresence mode="wait">
-                  {cases?.filter((c: Case) => c.status === 'resolved').map((case_: Case) => (
-                    <motion.div 
-                      key={case_.id} 
-                      className="border-b py-4 last:border-0"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-semibold">Case #{case_.id}: {case_.childName}</h3>
-                          <p className="text-sm text-gray-600">Location: {case_.location}</p>
-                          <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
+              <Card>
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-xl sm:text-2xl">Resolved Cases</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AnimatePresence mode="wait">
+                    {cases?.filter((c: Case) => c.status === 'resolved').map((case_: Case) => (
+                      <motion.div 
+                        key={case_.id} 
+                        className="border-b py-4 last:border-0"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:items-center mb-4">
+                          <div className="space-y-1">
+                            <h3 className="font-semibold text-base sm:text-lg">Case #{case_.id}: {case_.childName}</h3>
+                            <p className="text-sm text-gray-600">Location: {case_.location}</p>
+                            <p className="text-sm text-gray-600">Type: {case_.caseType}</p>
+                          </div>
+                          <Select
+                            value={case_.status || undefined}
+                            onValueChange={(value) => handleStatusUpdate(case_.id, value)}
+                            disabled={isUpdating && updatingCaseId === case_.id}
+                          >
+                            <SelectTrigger className="w-full sm:w-32">
+                              {isUpdating && updatingCaseId === case_.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <SelectValue placeholder="Status" />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="open">Open</SelectItem>
+                              <SelectItem value="investigating">Investigating</SelectItem>
+                              <SelectItem value="resolved">Resolved</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <Select
-                          value={case_.status || undefined}
-                          onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                          disabled={isUpdating && updatingCaseId === case_.id}
-                        >
-                          <SelectTrigger className="w-32">
-                            {isUpdating && updatingCaseId === case_.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <SelectValue placeholder="Status" />
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="open">Open</SelectItem>
-                            <SelectItem value="investigating">Investigating</SelectItem>
-                            <SelectItem value="resolved">Resolved</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <p className="text-sm">{case_.description}</p>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </motion.div>
+                        <p className="text-sm text-gray-700 line-clamp-3 sm:line-clamp-none">{case_.description}</p>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 }
