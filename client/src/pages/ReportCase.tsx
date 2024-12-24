@@ -41,12 +41,15 @@ const reportCaseSchema = z.object({
 
 type ReportCaseForm = z.infer<typeof reportCaseSchema>;
 
-export default function ReportCase() {
+interface ReportCaseProps {
+  address: string;
+}
+
+export default function ReportCase({ address }: ReportCaseProps) {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
   const [showProfileCard, setShowProfileCard] = useState(true);
-
 
   const form = useForm<ReportCaseForm>({
     resolver: zodResolver(reportCaseSchema),
@@ -70,6 +73,9 @@ export default function ReportCase() {
           formData.append('files', files[i]);
         }
       }
+
+      // Add the reporter's address to the form data
+      formData.append('reporterAddress', address);
 
       Object.entries(data).forEach(([key, value]) => {
         formData.append(key, value.toString());
@@ -128,159 +134,159 @@ export default function ReportCase() {
                 </div>
               </motion.div>
             )}
-          <CardHeader>
-            <CardTitle>Report Missing Child Case</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="childName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Child's Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="age"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Age</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          onChange={(e) => field.onChange(Number(e.target.value))}
-                          value={field.value}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Known Location</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          placeholder="Please provide details about the circumstances..."
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="caseType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Case Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select case type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="child_missing">Missing Child</SelectItem>
-                          <SelectItem value="child_labour">Child Labour</SelectItem>
-                          <SelectItem value="child_harassment">Child Harassment</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="contactInfo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Information</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Phone number or email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="space-y-2">
-                  <Label htmlFor="files">Upload Images/Videos</Label>
-                  <Input
-                    id="files"
-                    type="file"
-                    ref={fileRef}
-                    multiple
-                    accept="image/*,video/*"
-                    className="cursor-pointer file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-primary file:text-primary-foreground
-                    hover:file:bg-primary/90"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    You can upload multiple images and videos
-                  </p>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full relative" 
-                  disabled={isPending}
-                >
-                  <AnimatePresence mode="wait">
-                    {isPending ? (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 flex items-center justify-center"
-                      >
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Processing...
-                      </motion.div>
-                    ) : (
-                      <motion.span
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      >
-                        Submit Report
-                      </motion.span>
+            <CardHeader>
+              <CardTitle>Report Missing Child Case</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="childName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Child's Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </AnimatePresence>
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="age"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Age</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Known Location</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            placeholder="Please provide details about the circumstances..."
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="caseType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Case Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select case type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="child_missing">Missing Child</SelectItem>
+                            <SelectItem value="child_labour">Child Labour</SelectItem>
+                            <SelectItem value="child_harassment">Child Harassment</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="contactInfo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Information</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Phone number or email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="files">Upload Images/Videos</Label>
+                    <Input
+                      id="files"
+                      type="file"
+                      ref={fileRef}
+                      multiple
+                      accept="image/*,video/*"
+                      className="cursor-pointer file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-primary file:text-primary-foreground
+                      hover:file:bg-primary/90"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      You can upload multiple images and videos
+                    </p>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full relative" 
+                    disabled={isPending}
+                  >
+                    <AnimatePresence mode="wait">
+                      {isPending ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute inset-0 flex items-center justify-center"
+                        >
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Processing...
+                        </motion.div>
+                      ) : (
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        >
+                          Submit Report
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
         </motion.div>
       )}
     </div>
