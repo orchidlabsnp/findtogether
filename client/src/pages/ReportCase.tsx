@@ -27,8 +27,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { format } from "date-fns";
 
-// Keep schema unchanged
 const reportCaseSchema = z.object({
   childName: z.string().min(1, "Child's name is required"),
   age: z.number().min(0).max(18),
@@ -48,8 +58,16 @@ export default function ReportCase() {
   const [, setLocation] = useLocation();
   const [showProfileCard, setShowProfileCard] = useState(true);
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
+  const [duplicateCase, setDuplicateCase] = useState<{
+    existingCase: any;
+    matchDetails: {
+      physicalMatch: number;
+      distinctiveFeatureMatch: number;
+      contactMatch: number;
+      overallSimilarity: number;
+    };
+  } | null>(null);
 
-  // Get the current wallet address
   useEffect(() => {
     const getWalletAddress = async () => {
       if (typeof window.ethereum !== 'undefined') {
@@ -118,6 +136,11 @@ export default function ReportCase() {
         body: formData,
       });
 
+      if (response.status === 409) {
+        const duplicateData = await response.json();
+        throw new Error("DUPLICATE_CASE:" + JSON.stringify(duplicateData));
+      }
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
@@ -133,13 +156,22 @@ export default function ReportCase() {
       setShowProfileCard(false);
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error.message.startsWith("DUPLICATE_CASE:")) {
+        const duplicateData = JSON.parse(error.message.replace("DUPLICATE_CASE:", ""));
+        setDuplicateCase(duplicateData);
+      } else {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
+
+  function formatSimilarity(value: number): string {
+    return `${(value * 100).toFixed(1)}%`;
+  }
 
   function onSubmit(data: ReportCaseForm) {
     submitCase(data);
@@ -213,8 +245,8 @@ export default function ReportCase() {
                         <FormItem>
                           <FormLabel>Age</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
+                            <Input
+                              type="number"
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               value={field.value}
                               className="w-full"
@@ -314,9 +346,9 @@ export default function ReportCase() {
                     </p>
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full relative" 
+                  <Button
+                    type="submit"
+                    className="w-full relative"
                     disabled={isPending}
                   >
                     <AnimatePresence mode="wait">
@@ -346,6 +378,58 @@ export default function ReportCase() {
             </CardContent>
           </Card>
         </motion.div>
+      )}
+      {duplicateCase && (
+        <AlertDialog open={!!duplicateCase} onOpenChange={() => setDuplicateCase(null)}>
+          <AlertDialogContent className="max-w-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Similar Case Already Exists</AlertDialogTitle>
+              <AlertDialogDescription>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    We found a similar case in our database. Please review the details below:
+                  </p>
+
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                    <div>
+                      <strong>Name:</strong> {duplicateCase.existingCase.childName}
+                    </div>
+                    <div>
+                      <strong>Location:</strong> {duplicateCase.existingCase.location}
+                    </div>
+                    <div>
+                      <strong>Status:</strong> {duplicateCase.existingCase.status}
+                    </div>
+                    <div>
+                      <strong>Date Reported:</strong>{" "}
+                      {format(new Date(duplicateCase.existingCase.createdAt), "PPp")}
+                    </div>
+
+                    <div className="border-t pt-3">
+                      <strong>Match Analysis:</strong>
+                      <ul className="mt-2 space-y-1 text-sm">
+                        <li>Physical Description Match: {formatSimilarity(duplicateCase.matchDetails.physicalMatch)}</li>
+                        <li>Feature Match: {formatSimilarity(duplicateCase.matchDetails.distinctiveFeatureMatch)}</li>
+                        <li>Contact Info Match: {formatSimilarity(duplicateCase.matchDetails.contactMatch)}</li>
+                        <li>Overall Similarity: {formatSimilarity(duplicateCase.matchDetails.overallSimilarity)}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Close</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  setLocation(`/find?case=${duplicateCase.existingCase.id}`);
+                }}
+              >
+                View Existing Case
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

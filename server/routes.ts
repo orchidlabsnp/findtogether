@@ -9,6 +9,7 @@ import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { initializeNotificationService } from "./services/notifications";
 import { analyzeAndNotify } from "./services/reportAnalysis";
+import { compareCases } from "./services/caseMatching";
 
 const storage = multer.diskStorage({
   destination: "./uploads",
@@ -73,7 +74,6 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
 
       if (!user) {
         console.log("Creating new user for address:", normalizedAddress);
-        // Create new user if doesn't exist
         const [newUser] = await db.insert(users)
           .values({ address: normalizedAddress })
           .returning();
@@ -100,6 +100,28 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
           console.log("Image saved successfully:", imageUrl);
         } catch (error) {
           console.error("Error processing image:", error);
+        }
+      }
+
+      // Check for similar existing cases
+      const existingCases = await db.query.cases.findMany();
+      const newCaseData = {
+        childName,
+        description,
+        contactInfo,
+        imageUrl,
+      };
+
+      for (const existingCase of existingCases) {
+        const matchDetails = await compareCases(newCaseData, existingCase);
+
+        // If overall similarity is high, return the match details
+        if (matchDetails.overallSimilarity > 0.8) {
+          return res.status(409).json({
+            message: "Similar case already exists",
+            existingCase,
+            matchDetails,
+          });
         }
       }
 
