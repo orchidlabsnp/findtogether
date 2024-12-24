@@ -1,8 +1,38 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Case } from "@db/schema";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { MapPin, Calendar, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 
 export default function Home() {
+  const { data: cases, isLoading } = useQuery<Case[]>({
+    queryKey: ["/api/cases"],
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
+
+  const getStatusColor = (status: string | null) => {
+    switch (status?.toLowerCase()) {
+      case 'open':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'investigating':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'resolved':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const groupedCases = {
+    open: cases?.filter(c => c.status === 'open') || [],
+    investigating: cases?.filter(c => c.status === 'investigating') || [],
+    resolved: cases?.filter(c => c.status === 'resolved') || [],
+  };
+
   return (
     <div className="min-h-screen">
       <section className="relative h-[600px] flex items-center">
@@ -13,7 +43,7 @@ export default function Home() {
             className="w-full h-full object-cover opacity-20"
           />
         </div>
-        
+
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -36,6 +66,142 @@ export default function Home() {
             </Button>
           </div>
         </motion.div>
+      </section>
+
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4 sm:px-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-8"
+          >
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <>
+                {/* Open Cases */}
+                {groupedCases.open.length > 0 && (
+                  <div className="space-y-4">
+                    <h2 className="text-2xl font-bold text-red-600">Open Cases</h2>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {groupedCases.open.map((case_) => (
+                        <motion.div
+                          key={case_.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="relative"
+                        >
+                          <Card>
+                            <CardContent className="p-6">
+                              <div className="flex justify-between items-start mb-4">
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-1">{case_.childName}</h3>
+                                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                                    <MapPin className="h-4 w-4 mr-1" />
+                                    <span>{case_.location}</span>
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className={getStatusColor(case_.status)}>
+                                  {case_.status?.toUpperCase()}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 line-clamp-2 mb-4">{case_.description}</p>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Calendar className="h-4 w-4 mr-1" />
+                                <span>{case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Investigating Cases */}
+                {groupedCases.investigating.length > 0 && (
+                  <div className="space-y-4">
+                    <h2 className="text-2xl font-bold text-yellow-600">Under Investigation</h2>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {groupedCases.investigating.map((case_) => (
+                        <motion.div
+                          key={case_.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="relative"
+                        >
+                          <Card>
+                            <CardContent className="p-6">
+                              <div className="flex justify-between items-start mb-4">
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-1">{case_.childName}</h3>
+                                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                                    <MapPin className="h-4 w-4 mr-1" />
+                                    <span>{case_.location}</span>
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className={getStatusColor(case_.status)}>
+                                  {case_.status?.toUpperCase()}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 line-clamp-2 mb-4">{case_.description}</p>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Calendar className="h-4 w-4 mr-1" />
+                                <span>{case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Resolved Cases */}
+                {groupedCases.resolved.length > 0 && (
+                  <div className="space-y-4">
+                    <h2 className="text-2xl font-bold text-green-600">Resolved Cases</h2>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {groupedCases.resolved.map((case_) => (
+                        <motion.div
+                          key={case_.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="relative"
+                        >
+                          <Card>
+                            <CardContent className="p-6">
+                              <div className="flex justify-between items-start mb-4">
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-1">{case_.childName}</h3>
+                                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                                    <MapPin className="h-4 w-4 mr-1" />
+                                    <span>{case_.location}</span>
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className={getStatusColor(case_.status)}>
+                                  {case_.status?.toUpperCase()}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 line-clamp-2 mb-4">{case_.description}</p>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Calendar className="h-4 w-4 mr-1" />
+                                <span>{case_.createdAt ? format(new Date(case_.createdAt), 'PPP') : 'Date not available'}</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </motion.div>
+        </div>
       </section>
 
       <section className="py-20 bg-blue-50">
