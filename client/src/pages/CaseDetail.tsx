@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle,
   Calendar,
@@ -55,7 +56,7 @@ export default function CaseDetail() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 mt-10">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -68,9 +69,14 @@ export default function CaseDetail() {
             <CardHeader>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                    {case_.childName}
-                  </h1>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="bg-slate-800 text-white">
+                      Case #{case_.id}
+                    </Badge>
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      {case_.childName}
+                    </h1>
+                  </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     <span>
@@ -190,7 +196,7 @@ export default function CaseDetail() {
                       Case Description
                     </h2>
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                      <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed break-words">
                         {case_.description}
                       </p>
                     </div>
