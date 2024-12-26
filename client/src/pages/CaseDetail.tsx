@@ -14,7 +14,11 @@ import {
   Brain,
   Fingerprint,
   Search,
-  Lightbulb
+  Lightbulb,
+  Ruler,
+  Scale,
+  Eye,
+  Scissors
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -114,6 +118,67 @@ export default function CaseDetail() {
                           </p>
                         </div>
                       </div>
+
+                      {case_.dateOfBirth && (
+                        <div className="flex items-start gap-3">
+                          <Calendar className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">Date of Birth</p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(case_.dateOfBirth), "PPP")}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {case_.hair && (
+                        <div className="flex items-start gap-3">
+                          <Scissors className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">Hair</p>
+                            <p className="text-sm text-muted-foreground">
+                              {case_.hair}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {case_.eyes && (
+                        <div className="flex items-start gap-3">
+                          <Eye className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">Eyes</p>
+                            <p className="text-sm text-muted-foreground">
+                              {case_.eyes}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {case_.height && (
+                        <div className="flex items-start gap-3">
+                          <Ruler className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">Height</p>
+                            <p className="text-sm text-muted-foreground">
+                              {case_.height} cm
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {case_.weight && (
+                        <div className="flex items-start gap-3">
+                          <Scale className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">Weight</p>
+                            <p className="text-sm text-muted-foreground">
+                              {case_.weight} kg
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex items-start gap-3">
                         <MapPin className="h-5 w-5 mt-0.5 text-muted-foreground" />
                         <div>
@@ -199,26 +264,6 @@ export default function CaseDetail() {
                             <AccordionContent>
                               <div className="space-y-2 pl-6">
                                 {Object.entries(JSON.parse(case_.aiCharacteristics).clothing || {}).map(([key, value]) => (
-                                  <div key={key} className="flex items-center gap-2">
-                                    <Lightbulb className="h-3 w-3 text-amber-500" />
-                                    <span className="text-sm capitalize">{key.replace('_', ' ')}: </span>
-                                    <span className="text-sm text-muted-foreground">{String(value)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-
-                          <AccordionItem value="distinctive">
-                            <AccordionTrigger className="hover:no-underline">
-                              <div className="flex items-center gap-2">
-                                <Search className="h-4 w-4 text-indigo-600" />
-                                <span className="font-semibold">Distinctive Features</span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="space-y-2 pl-6">
-                                {Object.entries(JSON.parse(case_.aiCharacteristics).distinctive || {}).map(([key, value]) => (
                                   <div key={key} className="flex items-center gap-2">
                                     <Lightbulb className="h-3 w-3 text-amber-500" />
                                     <span className="text-sm capitalize">{key.replace('_', ' ')}: </span>

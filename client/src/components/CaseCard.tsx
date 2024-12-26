@@ -184,7 +184,7 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <Button 
+          {/* <Button 
             variant="outline" 
             className="flex-1 relative" 
             onClick={(e) => {
@@ -215,7 +215,7 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
                 </motion.div>
               )}
             </AnimatePresence>
-          </Button>
+          </Button> */}
 
           <Dialog>
             <DialogTrigger asChild>

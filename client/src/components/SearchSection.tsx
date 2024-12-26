@@ -257,7 +257,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
             )}
           </AnimatePresence>
 
-          <AnimatePresence>
+          {/* <AnimatePresence>
             {!selectedImage && !query && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -272,7 +272,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
                 </p>
               </motion.div>
             )}
-          </AnimatePresence>
+          </AnimatePresence> */}
         </form>
       </Card>
     </div>
