@@ -204,9 +204,11 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
   app.post("/api/cases/search", upload.single('files'), async (req, res) => {
     try {
       console.log('Search request received:', {
+        method: req.method,
         searchType: req.body.searchType,
-        hasFile: req.file ? true : false,
-        query: req.body.query
+        hasFile: !!req.file,
+        query: req.body.query,
+        contentType: req.headers['content-type'],
       });
 
       const { searchType } = req.body;
@@ -216,12 +218,16 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
       // Handle image search
       if (searchType === 'image') {
         if (!file) {
-          console.log('No image file provided');
+          console.error('Image search error: No file provided');
           return res.status(400).send("Image file is required for image search");
         }
 
         try {
-          console.log('Processing image:', file.originalname);
+          console.log('Processing image search:', {
+            filename: file.originalname,
+            size: file.size,
+            mimetype: file.mimetype
+          });
 
           // Ensure uploads directory exists
           if (!fs.existsSync('./uploads')) {
@@ -232,43 +238,50 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
           // Save image to disk
           const filename = `${Date.now()}-${file.originalname}`;
           const filepath = `./uploads/${filename}`;
-          console.log('Saving image to:', filepath);
+          console.log('Saving uploaded image to:', filepath);
 
           await fs.promises.writeFile(filepath, file.buffer);
           const imageUrl = `/uploads/${filename}`;
-          console.log('Image saved successfully at:', imageUrl);
+          console.log('Image saved successfully:', imageUrl);
 
           // Process image with AI
-          console.log('Processing image analysis...');
-          const imageAnalysis = await getImageDescription(file.buffer);
-          console.log('Image analysis completed:', imageAnalysis);
+          console.log('Starting AI image analysis...');
+          let imageAnalysis;
+          try {
+            imageAnalysis = await getImageDescription(file.buffer);
+            console.log('AI analysis completed:', imageAnalysis);
+          } catch (aiError) {
+            console.error('AI analysis failed:', aiError);
+            throw new Error('Failed to analyze image with AI');
+          }
 
-          // Get all cases
+          // Get all cases for comparison
+          console.log('Fetching cases from database...');
           const allCases = await db.query.cases.findMany({
             orderBy: (cases, { desc }) => [desc(cases.createdAt)]
           });
-
-          console.log('Found cases for comparison:', allCases.length);
+          console.log(`Found ${allCases.length} cases for comparison`);
 
           // Compare image with each case
+          console.log('Starting case comparison...');
           const casesWithScores = await Promise.all(
             allCases.map(async (case_) => {
               try {
                 if (!case_.imageUrl) {
+                  console.log(`Case ${case_.id}: No image available`);
                   return { ...case_, similarity: 0 };
                 }
 
                 const casePath = path.join(process.cwd(), case_.imageUrl.replace(/^\//, ''));
                 if (!fs.existsSync(casePath)) {
-                  console.log(`Case ${case_.id} image not found at ${casePath}`);
+                  console.log(`Case ${case_.id}: Image file not found at ${casePath}`);
                   return { ...case_, similarity: 0 };
                 }
 
+                console.log(`Processing case ${case_.id} image comparison...`);
                 const caseImageBuffer = await fs.promises.readFile(casePath);
                 const characteristics = case_.aiCharacteristics ? 
                   JSON.parse(case_.aiCharacteristics) : undefined;
-
-                console.log(`Analyzing case ${case_.id} with AI characteristics`);
 
                 const comparison = await compareImageWithDescription(
                   caseImageBuffer,
@@ -276,7 +289,7 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
                   characteristics
                 );
 
-                console.log(`Case ${case_.id} analysis complete:`, {
+                console.log(`Case ${case_.id} comparison results:`, {
                   similarity: comparison.similarity,
                   matchDetails: comparison.matchDetails
                 });
@@ -298,60 +311,77 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
             .filter(case_ => case_.similarity > 0.4)
             .sort((a, b) => b.similarity - a.similarity);
 
-          console.log(`Found ${searchResults.length} similar cases`);
+          console.log(`Search complete. Found ${searchResults.length} similar cases`);
           return res.json(searchResults);
 
         } catch (error) {
-          console.error('Error processing image search:', error);
-          return res.status(500).send("Error processing image search");
+          console.error('Image search processing error:', error);
+          return res.status(500).json({
+            error: "Error processing image search",
+            details: error.message
+          });
         }
       }
 
       // Handle text-based searches
       let searchResults;
-      switch (searchType) {
-        case 'location':
-          searchResults = await db.query.cases.findMany({
-            where: (cases, { ilike }) => ilike(cases.location, `%${query}%`),
-            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-          });
-          break;
+      console.log('Processing text-based search:', { searchType, query });
 
-        case 'case_type':
-          searchResults = await db.query.cases.findMany({
-            where: (cases, { eq }) => eq(cases.caseType, query as string),
-            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-          });
-          break;
+      try {
+        switch (searchType) {
+          case 'location':
+            searchResults = await db.query.cases.findMany({
+              where: (cases, { ilike }) => ilike(cases.location, `%${query}%`),
+              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+            });
+            break;
 
-        case 'text':
-          searchResults = await db.query.cases.findMany({
-            where: (cases, { or, ilike }) => 
-              or(
-                ilike(cases.childName, `%${query}%`),
-                ilike(cases.description, `%${query}%`),
-                ilike(cases.caseType, `%${query}%`)
-              ),
-            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-          });
-          break;
+          case 'case_type':
+            searchResults = await db.query.cases.findMany({
+              where: (cases, { eq }) => eq(cases.caseType, query as string),
+              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+            });
+            break;
 
-        default:
-          searchResults = await db.query.cases.findMany({
-            where: (cases, { or, ilike }) => 
-              or(
-                ilike(cases.childName, `%${query}%`),
-                ilike(cases.location, `%${query}%`),
-                ilike(cases.description, `%${query}%`)
-              ),
-            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-          });
+          case 'text':
+            searchResults = await db.query.cases.findMany({
+              where: (cases, { or, ilike }) => 
+                or(
+                  ilike(cases.childName, `%${query}%`),
+                  ilike(cases.description, `%${query}%`),
+                  ilike(cases.caseType, `%${query}%`)
+                ),
+              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+            });
+            break;
+
+          default:
+            searchResults = await db.query.cases.findMany({
+              where: (cases, { or, ilike }) => 
+                or(
+                  ilike(cases.childName, `%${query}%`),
+                  ilike(cases.location, `%${query}%`),
+                  ilike(cases.description, `%${query}%`)
+                ),
+              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+            });
+        }
+
+        console.log(`Text search complete. Found ${searchResults.length} results`);
+        res.json(searchResults);
+      } catch (error) {
+        console.error('Text search error:', error);
+        res.status(500).json({
+          error: "Error performing text search",
+          details: error.message
+        });
       }
-
-      res.json(searchResults);
     } catch (error) {
-      console.error('Search error:', error);
-      res.status(500).send("Error performing search");
+      console.error('Search endpoint error:', error);
+      res.status(500).json({
+        error: "Search operation failed",
+        details: error.message
+      });
     }
   });
 

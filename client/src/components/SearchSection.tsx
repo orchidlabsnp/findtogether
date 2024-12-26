@@ -27,46 +27,53 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Search form submitted:", { searchType, hasImage: !!selectedImage, query });
 
-    // Don't proceed if already searching
-    if (isSearching) return;
+    if (isSearching) {
+      console.log("Search already in progress, ignoring submission");
+      return;
+    }
 
     try {
-      // Handle image search
       if (selectedImage) {
-        console.log('Starting image search with file:', selectedImage.name);
+        console.log("Starting image search with file:", {
+          name: selectedImage.name,
+          size: selectedImage.size,
+          type: selectedImage.type
+        });
 
         const formData = new FormData();
         formData.append("files", selectedImage);
         formData.append("searchType", "image");
 
-        console.log('Sending image search request...');
-
-        const response = await fetch(`/api/cases/search`, {
+        console.log("Sending image search POST request to /api/cases/search");
+        const response = await fetch("/api/cases/search", {
           method: "POST",
           body: formData,
         });
 
+        console.log("Image search response status:", response.status);
+
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Image search failed:', errorText);
+          console.error("Image search failed:", errorText);
           toast({
             title: "Search Failed",
-            description: "Failed to process image search. Please try again.",
+            description: `Failed to process image search: ${errorText}`,
             variant: "destructive",
           });
           throw new Error(errorText);
         }
 
-        console.log('Image search completed, processing results...');
         const results = await response.json();
-        console.log('Search results:', results);
+        console.log("Image search results:", results);
         onSearch("", "image", results);
         return;
       }
 
-      // Handle other search types
+      // Handle text-based searches
       if (!query.trim() && searchType !== "image") {
+        console.log("Empty query for non-image search");
         toast({
           title: "Search Error",
           description: "Please enter a search term or upload an image",
@@ -75,34 +82,46 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
         return;
       }
 
+      console.log("Performing text-based search:", { searchType, query });
+
       // For case type searches
       if (searchType.startsWith('child_')) {
+        console.log("Performing case type search");
         onSearch(searchType, 'case_type');
         return;
       }
 
       // For all other searches
+      console.log("Performing general search");
       onSearch(query, searchType);
 
     } catch (error) {
-      console.error("Error performing search:", error);
+      console.error("Search error:", error);
       toast({
         title: "Search Failed",
-        description: "An error occurred while searching. Please try again.",
+        description: error instanceof Error ? error.message : "An error occurred while searching",
         variant: "destructive",
       });
     }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("Image selection triggered");
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      console.log("Image selected:", {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+
       setSelectedImage(file);
       setSearchType("image");
 
       // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
+        console.log("Preview image created");
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
@@ -110,6 +129,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
   };
 
   const clearImage = () => {
+    console.log("Clearing selected image");
     setSelectedImage(null);
     setImagePreview(null);
     if (fileInputRef.current) {
