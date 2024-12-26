@@ -242,6 +242,17 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
                     </motion.div>
                   )}
                 </div>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-4 text-sm text-muted-foreground text-center"
+                >
+                  {isSearching ? (
+                    <p>Processing your image to find potential matches...</p>
+                  ) : (
+                    <p>Click "Search with Image" to find similar cases</p>
+                  )}
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
