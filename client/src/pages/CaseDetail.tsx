@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   AlertCircle,
   Calendar,
@@ -17,10 +18,13 @@ import {
   Clock,
   PhoneCall,
   AlertTriangle,
-  MapPinned
+  MapPinned,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
+import { useState } from "react";
 import type { Case } from "@db/schema";
 
 interface CaseWithNarrative extends Case {
@@ -30,11 +34,16 @@ interface CaseWithNarrative extends Case {
 export default function CaseDetail() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const { data: case_, isLoading, error } = useQuery<CaseWithNarrative>({
     queryKey: [`/api/cases/${id}`],
     enabled: !!id,
   });
+
+  const toggleDescription = () => {
+    setIsDescriptionExpanded(!isDescriptionExpanded);
+  };
 
   if (error) {
     return (
@@ -190,9 +199,25 @@ export default function CaseDetail() {
                       Case Description
                     </h2>
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                        {case_.description}
-                      </p>
+                      <div className="relative">
+                        <p className={`text-muted-foreground whitespace-pre-wrap leading-relaxed ${!isDescriptionExpanded ? 'line-clamp-3' : ''}`}>
+                          {case_.description}
+                        </p>
+                        {case_.description && case_.description.length > 150 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2 text-primary hover:text-primary"
+                            onClick={toggleDescription}
+                          >
+                            {isDescriptionExpanded ? (
+                              <><ChevronUp className="h-4 w-4 mr-1" /> Show Less</>
+                            ) : (
+                              <><ChevronDown className="h-4 w-4 mr-1" /> Show More</>
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
