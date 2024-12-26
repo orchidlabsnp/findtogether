@@ -75,12 +75,12 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
   };
 
   return (
-    <Card 
+    <Card
       className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
       onClick={handleViewDetails}
     >
       <CardHeader className="relative h-56 p-0 overflow-hidden">
-        <motion.div 
+        <motion.div
           className="absolute inset-0 bg-gray-100"
           whileHover={{ scale: 1.05 }}
           transition={{ duration: 0.3 }}
@@ -106,7 +106,7 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
           <Badge className="bg-slate-800">
             Case #{case_.id}
           </Badge>
-          <Badge 
+          <Badge
             className={`border px-2 py-1 rounded-full ${getStatusColor(case_.status)}`}
             variant="outline"
           >
@@ -115,7 +115,7 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
         </div>
       </CardHeader>
       <CardContent className="p-6">
-        <motion.div 
+        <motion.div
           className="flex justify-between items-start mb-4"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -145,7 +145,7 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="space-y-3 mb-6"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -165,61 +165,29 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Badge variant="outline" className="capitalize">
-              {case_.caseType ? 
-                case_.caseType.split('_').map(word => 
+              {case_.caseType ?
+                case_.caseType.split('_').map(word =>
                   word.charAt(0).toUpperCase() + word.slice(1)
-                ).join(' ') 
+                ).join(' ')
                 : 'Child Missing'
               }
             </Badge>
           </div>
-          <p className="text-sm text-gray-600 line-clamp-2">
-            <Info className="h-4 w-4 inline mr-2" />
-            About: {case_.description}
+          <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed bg-gray-50 rounded p-3 mb-3">
+            <Info className="h-4 w-4 inline mr-2 align-text-bottom" />
+            {case_.description}
           </p>
         </motion.div>
-        <motion.div 
+        <motion.div
           className="flex gap-2"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          {/* <Button 
-            variant="outline" 
-            className="flex-1 relative" 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleContact();
-            }}
-            disabled={isContactLoading}
-          >
-            <AnimatePresence mode="wait">
-              {isContactLoading ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center justify-center"
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  Contact
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </Button> */}
 
           <Dialog>
             <DialogTrigger asChild>
-              <Button 
+              <Button
                 className="flex-1 relative"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -258,7 +226,7 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
                   Emergency contacts and details for {case_.childName}
                 </DialogDescription>
               </DialogHeader>
-              <motion.div 
+              <motion.div
                 className="space-y-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
