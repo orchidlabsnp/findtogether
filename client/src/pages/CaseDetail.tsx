@@ -23,11 +23,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import type { Case } from "@db/schema";
 
+interface CaseWithNarrative extends Case {
+  narrative?: string;
+}
+
 export default function CaseDetail() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
 
-  const { data: case_, isLoading, error } = useQuery<Case>({
+  const { data: case_, isLoading, error } = useQuery<CaseWithNarrative>({
     queryKey: [`/api/cases/${id}`],
     enabled: !!id,
   });
@@ -80,7 +84,6 @@ export default function CaseDetail() {
               </div>
             </CardHeader>
             <CardContent className="space-y-8">
-              {/* Image Section */}
               {case_.imageUrl && (
                 <div className="aspect-video w-full relative rounded-lg overflow-hidden">
                   <img
@@ -92,7 +95,6 @@ export default function CaseDetail() {
               )}
 
               <div className="grid md:grid-cols-2 gap-8">
-                {/* Left Column - Child Information */}
                 <div className="space-y-6">
                   <div>
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -195,7 +197,6 @@ export default function CaseDetail() {
                   </div>
                 </div>
 
-                {/* Right Column - Contact Information and Important Details */}
                 <div className="space-y-6">
                   <div>
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -215,37 +216,38 @@ export default function CaseDetail() {
                     </div>
                   </div>
 
-                  {/* Important Information Section */}
                   <div>
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5 text-red-500" />
                       Important Information
                     </h2>
                     <div className="bg-red-50 border border-red-100 rounded-lg p-4 space-y-4">
-                      {/* Narrative Description */}
                       <div className="text-red-600 leading-relaxed">
-                        <p className="mb-4">
-                          <span className="font-medium">{case_.childName}</span> was last seen on{' '}
-                          <span className="font-medium">
-                            {case_.createdAt ? format(new Date(case_.createdAt), "MMMM d, yyyy 'at' h:mmaaa") : 'Unknown date'}{' '}
-                          </span>
-                          at <span className="font-medium">{case_.location}</span>.{' '}
-                          {case_.height && case_.weight && (
-                            <>They are approximately {case_.height}cm tall and weigh {case_.weight}kg. </>
-                          )}
-                          {case_.hair && case_.eyes && (
-                            <>They have {case_.hair} hair and {case_.eyes} eyes. </>
-                          )}
-                          {case_.description && (
-                            <>{case_.description}</>
-                          )}
-                        </p>
+                        {case_.narrative ? (
+                          <p className="mb-4">{case_.narrative}</p>
+                        ) : (
+                          <p className="mb-4">
+                            <span className="font-medium">{case_.childName}</span> was last seen on{' '}
+                            <span className="font-medium">
+                              {case_.createdAt ? format(new Date(case_.createdAt), "MMMM d, yyyy 'at' h:mmaaa") : 'Unknown date'}{' '}
+                            </span>
+                            at <span className="font-medium">{case_.location}</span>.{' '}
+                            {case_.height && case_.weight && (
+                              <>They are approximately {case_.height}cm tall and weigh {case_.weight}kg. </>
+                            )}
+                            {case_.hair && case_.eyes && (
+                              <>They have {case_.hair} hair and {case_.eyes} eyes. </>
+                            )}
+                            {case_.description && (
+                              <>{case_.description}</>
+                            )}
+                          </p>
+                        )}
                         <p className="font-medium">
                           If you have any information about {case_.childName}'s whereabouts, please contact:
                         </p>
                       </div>
 
-                      {/* Emergency Contacts */}
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
                           <PhoneCall className="h-4 w-4 text-red-500" />

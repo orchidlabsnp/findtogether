@@ -7,6 +7,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
+import { generateCaseNarrative } from "./lib/openai";
 
 // Add detailed logging for troubleshooting
 const logError = (context: string, error: any) => {
@@ -381,7 +382,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add this endpoint after the existing case-related endpoints
+  // Update the case detail endpoint to include narrative
   app.get("/api/cases/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -405,7 +406,15 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      res.json(foundCase);
+      // Generate narrative using OpenAI
+      try {
+        const narrative = await generateCaseNarrative(foundCase);
+        res.json({ ...foundCase, narrative });
+      } catch (error) {
+        console.error("Error generating narrative:", error);
+        // Still return the case even if narrative generation fails
+        res.json(foundCase);
+      }
     } catch (error) {
       console.error("Error fetching case:", error);
       res.status(500).json({
