@@ -2,12 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  AlertCircle, 
-  Calendar, 
-  Mail, 
-  MapPin, 
-  Phone, 
+import {
+  AlertCircle,
+  Calendar,
+  Mail,
+  MapPin,
+  Phone,
   User,
   Search,
   Ruler,
@@ -222,42 +222,31 @@ export default function CaseDetail() {
                       Important Information
                     </h2>
                     <div className="bg-red-50 border border-red-100 rounded-lg p-4 space-y-4">
-                      {/* Last Seen Details */}
-                      <div className="flex items-start gap-3">
-                        <Clock className="h-5 w-5 mt-0.5 text-red-500" />
-                        <div>
-                          <p className="font-medium text-red-700">Last Seen</p>
-                          <p className="text-sm text-red-600 font-medium">
-                            {case_.createdAt ? format(new Date(case_.createdAt), "PPP 'at' p") : 'Date not available'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Location Details */}
-                      <div className="flex items-start gap-3">
-                        <MapPinned className="h-5 w-5 mt-0.5 text-red-500" />
-                        <div>
-                          <p className="font-medium text-red-700">Location</p>
-                          <p className="text-sm text-red-600">
-                            {case_.location || 'Location not specified'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Description & Last Seen Wearing */}
-                      <div className="flex items-start gap-3">
-                        <User className="h-5 w-5 mt-0.5 text-red-500" />
-                        <div>
-                          <p className="font-medium text-red-700">Description</p>
-                          <p className="text-sm text-red-600 whitespace-pre-wrap">
-                            {case_.description || 'No description available'}
-                          </p>
-                        </div>
+                      {/* Narrative Description */}
+                      <div className="text-red-600 leading-relaxed">
+                        <p className="mb-4">
+                          <span className="font-medium">{case_.childName}</span> was last seen on{' '}
+                          <span className="font-medium">
+                            {case_.createdAt ? format(new Date(case_.createdAt), "MMMM d, yyyy 'at' h:mmaaa") : 'Unknown date'}{' '}
+                          </span>
+                          at <span className="font-medium">{case_.location}</span>.{' '}
+                          {case_.height && case_.weight && (
+                            <>They are approximately {case_.height}cm tall and weigh {case_.weight}kg. </>
+                          )}
+                          {case_.hair && case_.eyes && (
+                            <>They have {case_.hair} hair and {case_.eyes} eyes. </>
+                          )}
+                          {case_.description && (
+                            <>{case_.description}</>
+                          )}
+                        </p>
+                        <p className="font-medium">
+                          If you have any information about {case_.childName}'s whereabouts, please contact:
+                        </p>
                       </div>
 
                       {/* Emergency Contacts */}
-                      <div className="mt-6 space-y-3">
-                        <p className="font-semibold text-red-800">Emergency Contacts:</p>
+                      <div className="space-y-3">
                         <div className="flex items-center gap-2">
                           <PhoneCall className="h-4 w-4 text-red-500" />
                           <a href={`tel:${case_.contactInfo}`} className="text-red-600 hover:underline font-medium">
