@@ -19,7 +19,7 @@ export const cases = pgTable("cases", {
   id: serial("id").primaryKey(),
   childName: text("child_name").notNull(),
   age: integer("age").notNull(),
-  dateOfBirth: timestamp("date_of_birth"),
+  dateOfBirth: text("date_of_birth"),
   hair: text("hair"),
   eyes: text("eyes"),
   height: integer("height"), // in centimeters
