@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { cases, users } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, ilike, or } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -168,7 +168,7 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
     }
 });
 
-app.get("/api/cases/user/:address", async (req, res) => {
+  app.get("/api/cases/user/:address", async (req, res) => {
     try {
       const { address } = req.params;
       const normalizedAddress = address.toLowerCase();
@@ -201,25 +201,114 @@ app.get("/api/cases/user/:address", async (req, res) => {
     }
   });
 
-  app.post("/api/cases/search", upload.array("files"), async (req, res) => {
-    console.log('Search request received:', {
-      searchType: req.body.searchType,
-      hasFiles: req.files ? req.files.length > 0 : false,
-      query: req.body.query
-    });
-
-    const { searchType } = req.body;
-    const files = req.files as Express.Multer.File[];
-    const query = req.body.query;
-
-    if (!query && (!files || files.length === 0) && searchType !== "image") {
-      console.log('Invalid search request: missing query or files');
-      return res.status(400).send("Search query or image is required");
-    }
-
+  app.post("/api/cases/search", upload.single('files'), async (req, res) => {
     try {
-      let searchResults;
+      console.log('Search request received:', {
+        searchType: req.body.searchType,
+        hasFile: req.file ? true : false,
+        query: req.body.query
+      });
 
+      const { searchType } = req.body;
+      const query = req.body.query;
+      const file = req.file;
+
+      // Handle image search
+      if (searchType === 'image') {
+        if (!file) {
+          console.log('No image file provided');
+          return res.status(400).send("Image file is required for image search");
+        }
+
+        try {
+          console.log('Processing image:', file.originalname);
+
+          // Ensure uploads directory exists
+          if (!fs.existsSync('./uploads')) {
+            console.log('Creating uploads directory');
+            fs.mkdirSync('./uploads', { recursive: true });
+          }
+
+          // Save image to disk
+          const filename = `${Date.now()}-${file.originalname}`;
+          const filepath = `./uploads/${filename}`;
+          console.log('Saving image to:', filepath);
+
+          await fs.promises.writeFile(filepath, file.buffer);
+          const imageUrl = `/uploads/${filename}`;
+          console.log('Image saved successfully at:', imageUrl);
+
+          // Process image with AI
+          console.log('Processing image analysis...');
+          const imageAnalysis = await getImageDescription(file.buffer);
+          console.log('Image analysis completed:', imageAnalysis);
+
+          // Get all cases
+          const allCases = await db.query.cases.findMany({
+            orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+          });
+
+          console.log('Found cases for comparison:', allCases.length);
+
+          // Compare image with each case
+          const casesWithScores = await Promise.all(
+            allCases.map(async (case_) => {
+              try {
+                if (!case_.imageUrl) {
+                  return { ...case_, similarity: 0 };
+                }
+
+                const casePath = path.join(process.cwd(), case_.imageUrl.replace(/^\//, ''));
+                if (!fs.existsSync(casePath)) {
+                  console.log(`Case ${case_.id} image not found at ${casePath}`);
+                  return { ...case_, similarity: 0 };
+                }
+
+                const caseImageBuffer = await fs.promises.readFile(casePath);
+                const characteristics = case_.aiCharacteristics ? 
+                  JSON.parse(case_.aiCharacteristics) : undefined;
+
+                console.log(`Analyzing case ${case_.id} with AI characteristics`);
+
+                const comparison = await compareImageWithDescription(
+                  caseImageBuffer,
+                  case_.description,
+                  characteristics
+                );
+
+                console.log(`Case ${case_.id} analysis complete:`, {
+                  similarity: comparison.similarity,
+                  matchDetails: comparison.matchDetails
+                });
+
+                return { 
+                  ...case_,
+                  similarity: comparison.similarity,
+                  matchDetails: comparison.matchDetails
+                };
+              } catch (error) {
+                console.error(`Error processing case ${case_.id}:`, error);
+                return { ...case_, similarity: 0 };
+              }
+            })
+          );
+
+          // Filter and sort results
+          const searchResults = casesWithScores
+            .filter(case_ => case_.similarity > 0.4)
+            .sort((a, b) => b.similarity - a.similarity);
+
+          console.log(`Found ${searchResults.length} similar cases`);
+          return res.json(searchResults);
+
+        } catch (error) {
+          console.error('Error processing image search:', error);
+          return res.status(500).send("Error processing image search");
+        }
+      }
+
+      // Handle text-based searches
+      let searchResults;
       switch (searchType) {
         case 'location':
           searchResults = await db.query.cases.findMany({
@@ -247,135 +336,7 @@ app.get("/api/cases/user/:address", async (req, res) => {
           });
           break;
 
-        case 'image':
-          console.log('Processing image search...');
-          if (!files || !files.length) {
-            console.log('No image file provided');
-            return res.status(400).send("Image file is required for image search");
-          }
-
-          try {
-            const imageFile = files[0];
-            console.log('Processing image:', imageFile.originalname);
-
-            // Ensure uploads directory exists
-            if (!fs.existsSync('./uploads')) {
-              console.log('Creating uploads directory');
-              fs.mkdirSync('./uploads', { recursive: true });
-            }
-
-            // Save image to disk first
-            const filename = `${Date.now()}-${imageFile.originalname}`;
-            const filepath = `./uploads/${filename}`;
-            console.log('Saving image to:', filepath);
-
-            await fs.promises.writeFile(filepath, imageFile.buffer);
-            const imageUrl = `/uploads/${filename}`;
-            console.log('Image saved successfully at:', imageUrl);
-
-            console.log('Processing image analysis...');
-            const imageAnalysis = await getImageDescription(imageFile.buffer);
-            console.log('Image analysis completed:', imageAnalysis);
-
-            // Get all cases
-            const allCases = await db.query.cases.findMany({
-              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-            });
-
-            console.log('Found cases for comparison:', allCases.length);
-
-            // Compare image with each case using enhanced analysis
-            const casesWithScores = await Promise.all(
-              allCases.map(async (case_) => {
-                try {
-                  if (!case_.imageUrl) {
-                    console.log(`Case ${case_.id} skipped - no image`);
-                    return { 
-                      ...case_, 
-                      similarity: 0, 
-                      matchedFeatures: [],
-                      matchDetails: null
-                    };
-                  }
-
-                  // Read the case image file
-                  const casePath = path.join(process.cwd(), case_.imageUrl.replace(/^\//, ''));
-                  if (!fs.existsSync(casePath)) {
-                    console.log(`Case ${case_.id} image not found at ${casePath}`);
-                    return { 
-                      ...case_, 
-                      similarity: 0, 
-                      matchedFeatures: [],
-                      matchDetails: null
-                    };
-                  }
-
-                  const caseImageBuffer = await fs.promises.readFile(casePath);
-                  const characteristics = case_.aiCharacteristics ? 
-                    JSON.parse(case_.aiCharacteristics) : undefined;
-
-                  console.log(`Analyzing case ${case_.id} with AI characteristics`);
-
-                  const comparison = await compareImageWithDescription(
-                    caseImageBuffer,
-                    case_.description,
-                    characteristics
-                  );
-
-                  console.log(`Case ${case_.id} analysis complete:`, {
-                    similarity: comparison.similarity,
-                    matchDetails: comparison.matchDetails
-                  });
-
-                  return { 
-                    ...case_,
-                    similarity: comparison.similarity,
-                    matchedFeatures: comparison.matchedFeatures,
-                    matchDetails: comparison.matchDetails,
-                    aiAnalysis: {
-                      ...imageAnalysis.characteristics,
-                      matchScore: comparison.similarity,
-                      matchBreakdown: comparison.matchDetails
-                    }
-                  };
-                } catch (error) {
-                  console.error(`Error processing case ${case_.id}:`, error);
-                  return { 
-                    ...case_, 
-                    similarity: 0, 
-                    matchedFeatures: [],
-                    matchDetails: null
-                  };
-                }
-              })
-            );
-
-            // Enhanced filtering with detailed match analysis
-            searchResults = casesWithScores
-              .filter(case_ => {
-                // Case must meet minimum overall similarity threshold
-                if (case_.similarity < 0.4) return false;
-
-                // If match details available, apply additional criteria
-                if (case_.matchDetails) {
-                  const { physicalMatch, distinctiveFeatureMatch } = case_.matchDetails;
-                  // Require good physical match OR strong distinctive features
-                  return physicalMatch > 0.6 || distinctiveFeatureMatch > 0.7;
-                }
-
-                return true;
-              })
-              .sort((a, b) => b.similarity - a.similarity);
-
-            console.log(`Found ${searchResults.length} similar cases`);
-          } catch (error) {
-            console.error('Error processing image search:', error);
-            return res.status(500).send("Error processing image search");
-          }
-          break;
-
         default:
-          // Combined search
           searchResults = await db.query.cases.findMany({
             where: (cases, { or, ilike }) => 
               or(

@@ -61,24 +61,29 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
         console.log('Image search completed, processing results...');
         const results = await response.json();
         console.log('Search results:', results);
-
         onSearch("", "image", results);
         return;
       }
 
       // Handle other search types
-      if (searchType.startsWith('child_')) {
-        onSearch(searchType, 'case_type');
-      } else if (!query.trim() && searchType !== "image") {
+      if (!query.trim() && searchType !== "image") {
         toast({
           title: "Search Error",
           description: "Please enter a search term or upload an image",
           variant: "destructive",
         });
         return;
-      } else {
-        onSearch(query, searchType);
       }
+
+      // For case type searches
+      if (searchType.startsWith('child_')) {
+        onSearch(searchType, 'case_type');
+        return;
+      }
+
+      // For all other searches
+      onSearch(query, searchType);
+
     } catch (error) {
       console.error("Error performing search:", error);
       toast({
