@@ -13,7 +13,11 @@ import {
   Ruler,
   Scale,
   Eye,
-  Scissors
+  Scissors,
+  Clock,
+  PhoneCall,
+  AlertTriangle,
+  MapPinned
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -191,20 +195,83 @@ export default function CaseDetail() {
                   </div>
                 </div>
 
-                {/* Right Column - Contact Information */}
-                <div>
-                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                    <Phone className="h-5 w-5 text-primary" />
-                    Contact Information
-                  </h2>
-                  <div className="space-y-4 bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Phone className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Contact Number</p>
-                        <p className="text-sm text-muted-foreground">
-                          {case_.contactInfo}
-                        </p>
+                {/* Right Column - Contact Information and Important Details */}
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <Phone className="h-5 w-5 text-primary" />
+                      Contact Information
+                    </h2>
+                    <div className="space-y-4 bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Phone className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">Contact Number</p>
+                          <p className="text-sm text-muted-foreground">
+                            {case_.contactInfo}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Important Information Section */}
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      Important Information
+                    </h2>
+                    <div className="bg-red-50 border border-red-100 rounded-lg p-4 space-y-4">
+                      {/* Last Seen Details */}
+                      <div className="flex items-start gap-3">
+                        <Clock className="h-5 w-5 mt-0.5 text-red-500" />
+                        <div>
+                          <p className="font-medium text-red-700">Last Seen</p>
+                          <p className="text-sm text-red-600 font-medium">
+                            November 24, 2023 at 9:40 AM
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Location Details */}
+                      <div className="flex items-start gap-3">
+                        <MapPinned className="h-5 w-5 mt-0.5 text-red-500" />
+                        <div>
+                          <p className="font-medium text-red-700">Location</p>
+                          <p className="text-sm text-red-600">
+                            Upper Riverdale Road in Riverdale, Georgia
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Last Seen Wearing */}
+                      <div className="flex items-start gap-3">
+                        <User className="h-5 w-5 mt-0.5 text-red-500" />
+                        <div>
+                          <p className="font-medium text-red-700">Last Seen Wearing</p>
+                          <ul className="text-sm text-red-600 list-disc ml-4">
+                            <li>Ankle-length white puffy jacket with fur on the hood</li>
+                            <li>Gray sweatpants</li>
+                            <li>Hair up</li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* Emergency Contacts */}
+                      <div className="mt-6 space-y-3">
+                        <p className="font-semibold text-red-800">Emergency Contacts:</p>
+                        <div className="flex items-center gap-2">
+                          <PhoneCall className="h-4 w-4 text-red-500" />
+                          <a href="tel:1-770-477-3550" className="text-red-600 hover:underline font-medium">
+                            Clayton County Police Department: 1-770-477-3550
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <PhoneCall className="h-4 w-4 text-red-500" />
+                          <a href="tel:1-800-426-5678" className="text-red-600 hover:underline font-medium">
+                            Child Find of America: 1-800-I-AM-LOST (1-800-426-5678)
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>
