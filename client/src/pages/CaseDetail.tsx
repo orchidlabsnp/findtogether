@@ -2,14 +2,35 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Calendar, Mail, MapPin, Phone, User } from "lucide-react";
-import { motion } from "framer-motion";
+import { 
+  AlertCircle, 
+  Calendar, 
+  Mail, 
+  MapPin, 
+  Phone, 
+  User,
+  ChevronDown,
+  ChevronUp,
+  Brain,
+  Fingerprint,
+  Search,
+  Lightbulb
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import type { Case } from "@db/schema";
+import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function CaseDetail() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
+  const [isAiExpanded, setIsAiExpanded] = useState(false);
 
   const { data: case_, isLoading, error } = useQuery<Case>({
     queryKey: [`/api/cases/${id}`],
@@ -64,6 +85,7 @@ export default function CaseDetail() {
               </div>
             </CardHeader>
             <CardContent className="space-y-8">
+              {/* Image Section */}
               {case_.imageUrl && (
                 <div className="aspect-video w-full relative rounded-lg overflow-hidden">
                   <img
@@ -75,10 +97,14 @@ export default function CaseDetail() {
               )}
 
               <div className="grid md:grid-cols-2 gap-8">
+                {/* Left Column - Child Information */}
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-semibold mb-4">Child Information</h2>
-                    <div className="space-y-4">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" />
+                      Child Information
+                    </h2>
+                    <div className="space-y-4 bg-gray-50 rounded-lg p-4">
                       <div className="flex items-start gap-3">
                         <User className="h-5 w-5 mt-0.5 text-muted-foreground" />
                         <div>
@@ -101,17 +127,26 @@ export default function CaseDetail() {
                   </div>
 
                   <div>
-                    <h2 className="text-xl font-semibold mb-4">Description</h2>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {case_.description}
-                    </p>
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <Search className="h-5 w-5 text-primary" />
+                      Case Description
+                    </h2>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                        {case_.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
+                {/* Right Column - Contact and AI Analysis */}
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
-                    <div className="space-y-4">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <Phone className="h-5 w-5 text-primary" />
+                      Contact Information
+                    </h2>
+                    <div className="space-y-4 bg-gray-50 rounded-lg p-4">
                       <div className="flex items-start gap-3">
                         <Phone className="h-5 w-5 mt-0.5 text-muted-foreground" />
                         <div>
@@ -126,12 +161,75 @@ export default function CaseDetail() {
 
                   {case_.aiCharacteristics && (
                     <div>
-                      <h2 className="text-xl font-semibold mb-4">AI Analysis</h2>
-                      <div className="bg-muted p-4 rounded-lg">
-                        <pre className="text-sm whitespace-pre-wrap">
-                          {JSON.stringify(JSON.parse(case_.aiCharacteristics), null, 2)}
-                        </pre>
-                      </div>
+                      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <Brain className="h-5 w-5 text-primary" />
+                        AI Analysis
+                      </h2>
+                      <motion.div
+                        className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-lg"
+                      >
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value="physical">
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <Fingerprint className="h-4 w-4 text-blue-600" />
+                                <span className="font-semibold">Physical Characteristics</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="space-y-2 pl-6">
+                                {Object.entries(JSON.parse(case_.aiCharacteristics).physical || {}).map(([key, value]) => (
+                                  <div key={key} className="flex items-center gap-2">
+                                    <Lightbulb className="h-3 w-3 text-amber-500" />
+                                    <span className="text-sm capitalize">{key.replace('_', ' ')}: </span>
+                                    <span className="text-sm text-muted-foreground">{String(value)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          <AccordionItem value="clothing">
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <Search className="h-4 w-4 text-purple-600" />
+                                <span className="font-semibold">Clothing Details</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="space-y-2 pl-6">
+                                {Object.entries(JSON.parse(case_.aiCharacteristics).clothing || {}).map(([key, value]) => (
+                                  <div key={key} className="flex items-center gap-2">
+                                    <Lightbulb className="h-3 w-3 text-amber-500" />
+                                    <span className="text-sm capitalize">{key.replace('_', ' ')}: </span>
+                                    <span className="text-sm text-muted-foreground">{String(value)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          <AccordionItem value="distinctive">
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <Search className="h-4 w-4 text-indigo-600" />
+                                <span className="font-semibold">Distinctive Features</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="space-y-2 pl-6">
+                                {Object.entries(JSON.parse(case_.aiCharacteristics).distinctive || {}).map(([key, value]) => (
+                                  <div key={key} className="flex items-center gap-2">
+                                    <Lightbulb className="h-3 w-3 text-amber-500" />
+                                    <span className="text-sm capitalize">{key.replace('_', ' ')}: </span>
+                                    <span className="text-sm text-muted-foreground">{String(value)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </motion.div>
                     </div>
                   )}
                 </div>
