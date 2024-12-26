@@ -8,7 +8,8 @@ import { format } from "date-fns";
 import type { Case } from "@db/schema";
 
 export default function CaseDetail() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
 
   const { data: case_, isLoading, error } = useQuery<Case>({
     queryKey: [`/api/cases/${id}`],
@@ -53,11 +54,11 @@ export default function CaseDetail() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     <span>
-                      Reported on {format(new Date(case_.createdAt), "PPP")}
+                      {case_.createdAt && format(new Date(case_.createdAt), "PPP")}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10">
+                <div className={`px-4 py-2 rounded-full ${getStatusColor(case_.status)}`}>
                   <span className="capitalize font-medium">{case_.status}</span>
                 </div>
               </div>
@@ -120,17 +121,6 @@ export default function CaseDetail() {
                           </p>
                         </div>
                       </div>
-                      {case_.email && (
-                        <div className="flex items-start gap-3">
-                          <Mail className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium">Email</p>
-                            <p className="text-sm text-muted-foreground">
-                              {case_.email}
-                            </p>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -199,4 +189,17 @@ function LoadingSkeleton() {
       </CardContent>
     </Card>
   );
+}
+
+function getStatusColor(status: string | null) {
+  switch (status?.toLowerCase()) {
+    case 'open':
+      return 'bg-red-100 text-red-800';
+    case 'investigating':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'resolved':
+      return 'bg-green-100 text-green-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
 }
