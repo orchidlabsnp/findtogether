@@ -7,6 +7,7 @@ import ReportCase from "@/pages/ReportCase";
 import SafetyGame from "@/pages/SafetyGame";
 import Admin from "@/pages/Admin";
 import Analytics from "@/pages/Analytics";
+import CaseDetail from "@/pages/CaseDetail";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import NotificationToast from "@/components/NotificationToast";
@@ -28,6 +29,7 @@ function App() {
             <Route path="/safety-game" component={SafetyGame} />
             <Route path="/admin" component={Admin} />
             <Route path="/analytics" component={Analytics} />
+            <Route path="/case/:id" component={CaseDetail} />
             <Route>
               <motion.div
                 initial={{ opacity: 0 }}

@@ -354,6 +354,39 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add this endpoint after the existing case-related endpoints
+  app.get("/api/cases/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const caseId = parseInt(id);
+
+      if (isNaN(caseId)) {
+        return res.status(400).json({
+          error: "Invalid case ID",
+          details: "Case ID must be a number"
+        });
+      }
+
+      const foundCase = await db.query.cases.findFirst({
+        where: (cases, { eq }) => eq(cases.id, caseId)
+      });
+
+      if (!foundCase) {
+        return res.status(404).json({
+          error: "Case not found",
+          details: "No case exists with the provided ID"
+        });
+      }
+
+      res.json(foundCase);
+    } catch (error) {
+      console.error("Error fetching case:", error);
+      res.status(500).json({
+        error: "Failed to fetch case",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

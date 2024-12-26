@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Calendar, Phone, Mail, Info, Heart, HelpCircle, Link, Loader2 } from "lucide-react";
+import { MapPin, Calendar, Phone, Mail, Info, Heart, HelpCircle, Link, Loader2, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,7 @@ interface CaseCardProps {
 export default function CaseCard({ case: case_ }: CaseCardProps) {
   const [isContactLoading, setIsContactLoading] = useState(false);
   const [isSaveLoading, setIsSaveLoading] = useState(false);
+  const [, navigate] = useLocation();
 
   const getStatusColor = (status: string | null) => {
     switch (status?.toLowerCase()) {
@@ -66,6 +68,10 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
     }
   };
 
+  const handleViewDetails = () => {
+    navigate(`/case/${case_.id}`);
+  };
+
   return (
     <motion.div 
       whileHover={{ scale: 1.02 }} 
@@ -73,6 +79,8 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
+      className="cursor-pointer"
+      onClick={handleViewDetails}
     >
       <Card className="overflow-hidden">
         <CardHeader className="relative h-56 p-0 overflow-hidden">
@@ -110,7 +118,7 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-6" onClick={(e) => e.stopPropagation()}>
           <motion.div 
             className="flex justify-between items-start mb-4"
             initial={{ opacity: 0, y: 10 }}
@@ -129,6 +137,18 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
                   {Math.round(case_.similarity * 100)}% Match
                 </Badge>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleViewDetails();
+                }}
+              >
+                <ExternalLink className="h-4 w-4" />
+                View Details
+              </Button>
             </div>
           </motion.div>
 
@@ -175,7 +195,10 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
             <Button 
               variant="outline" 
               className="flex-1 relative" 
-              onClick={handleContact}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleContact();
+              }}
               disabled={isContactLoading}
             >
               <AnimatePresence mode="wait">
@@ -206,7 +229,10 @@ export default function CaseCard({ case: case_ }: CaseCardProps) {
               <DialogTrigger asChild>
                 <Button 
                   className="flex-1 relative"
-                  onClick={handleSave}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSave();
+                  }}
                   disabled={isSaveLoading}
                 >
                   <AnimatePresence mode="wait">
