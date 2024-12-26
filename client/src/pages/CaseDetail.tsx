@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import ShareButtons from "@/components/ShareButtons";
 import {
   AlertCircle,
   Calendar,
@@ -18,9 +19,8 @@ import {
   Clock,
   PhoneCall,
   AlertTriangle,
-  MapPinned
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { format } from "date-fns";
 import type { Case } from "@db/schema";
 
@@ -31,11 +31,16 @@ interface CaseWithNarrative extends Case {
 export default function CaseDetail() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
+  const [location] = useLocation();
 
   const { data: case_, isLoading, error } = useQuery<CaseWithNarrative>({
     queryKey: [`/api/cases/${id}`],
     enabled: !!id,
   });
+
+  // Get the full URL for sharing
+  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}${location}` : '';
+  const shareTitle = case_ ? `Help find ${case_.childName}` : '';
 
   if (error) {
     return (
@@ -57,14 +62,14 @@ export default function CaseDetail() {
 
   return (
     <div className="container mx-auto px-4 py-8 mt-10">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl mx-auto"
-      >
-        {isLoading ? (
-          <LoadingSkeleton />
-        ) : case_ ? (
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : case_ ? (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-4xl mx-auto"
+        >
           <Card>
             <CardHeader>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -280,8 +285,16 @@ export default function CaseDetail() {
               </div>
             </CardContent>
           </Card>
-        ) : null}
-      </motion.div>
+
+          <div className="mt-8 mb-12">
+            <Card>
+              <CardContent className="py-6">
+                <ShareButtons url={shareUrl} title={shareTitle} />
+              </CardContent>
+            </Card>
+          </div>
+        </motion.div>
+      ) : null}
     </div>
   );
 }
