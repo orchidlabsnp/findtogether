@@ -8,6 +8,16 @@ import path from "path";
 import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 
+// Add detailed logging for troubleshooting
+const logError = (context: string, error: any) => {
+  console.error(`Error in ${context}:`, {
+    message: error.message,
+    code: error.code,
+    detail: error.detail,
+    stack: error.stack
+  });
+};
+
 // Ensure uploads directory exists
 if (!fs.existsSync('./uploads')) {
   fs.mkdirSync('./uploads', { recursive: true });
@@ -29,6 +39,139 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
+
+  // Get all cases endpoint with improved error handling
+  app.get("/api/cases", async (req, res) => {
+    try {
+      console.log('Fetching all cases...');
+      const allCases = await db.query.cases.findMany({
+        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+      });
+      console.log(`Successfully retrieved ${allCases.length} cases`);
+      res.json(allCases);
+    } catch (error) {
+      logError('GET /api/cases', error);
+      res.status(500).json({
+        error: "Failed to fetch cases",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Create case endpoint with validation and error handling
+  app.post("/api/cases", upload.array("files"), async (req, res) => {
+    try {
+      console.log("Received case submission:", {
+        ...req.body,
+        files: req.files?.length || 0
+      });
+
+      const { 
+        childName, 
+        age, 
+        dateOfBirth,
+        hair,
+        eyes,
+        height,
+        weight,
+        description, 
+        contactInfo, 
+        reporterAddress,
+        location,
+        caseType = 'child_missing'
+      } = req.body;
+
+      // Validate required fields
+      const requiredFields = {
+        childName,
+        age,
+        description,
+        contactInfo,
+        reporterAddress,
+        location
+      };
+
+      const missingFields = Object.entries(requiredFields)
+        .filter(([_, value]) => !value)
+        .map(([field]) => field);
+
+      if (missingFields.length > 0) {
+        console.log("Missing required fields:", missingFields);
+        return res.status(400).json({
+          error: "Missing required fields",
+          fields: missingFields
+        });
+      }
+
+      // Handle user creation/lookup
+      const normalizedAddress = reporterAddress.toLowerCase();
+      console.log("Looking up user with address:", normalizedAddress);
+
+      let user = await db.query.users.findFirst({
+        where: (users, { eq }) => eq(users.address, normalizedAddress)
+      });
+
+      if (!user) {
+        console.log("Creating new user for address:", normalizedAddress);
+        const [newUser] = await db.insert(users)
+          .values({ address: normalizedAddress })
+          .returning();
+        user = newUser;
+      }
+
+      // Handle image processing
+      const files = req.files as Express.Multer.File[];
+      const imageFile = files?.find(file => file.mimetype.startsWith('image/'));
+      let imageUrl;
+      let aiCharacteristics;
+
+      if (imageFile) {
+        try {
+          console.log("Processing image file...");
+          const analysis = await getImageDescription(imageFile.buffer);
+          aiCharacteristics = JSON.stringify(analysis.characteristics);
+
+          const filename = `${Date.now()}-${imageFile.originalname}`;
+          await fs.promises.writeFile(`./uploads/${filename}`, imageFile.buffer);
+          imageUrl = `/uploads/${filename}`;
+          console.log("Image processed and saved:", imageUrl);
+        } catch (error) {
+          logError('Image processing', error);
+        }
+      }
+
+      // Create the case with validated data
+      console.log("Creating new case...");
+      const [newCase] = await db.insert(cases).values({
+        childName,
+        age: parseInt(age),
+        dateOfBirth: dateOfBirth || null,
+        hair: hair || null,
+        eyes: eyes || null,
+        height: height ? parseInt(height) : null,
+        weight: weight ? parseInt(weight) : null,
+        description,
+        location,
+        contactInfo,
+        imageUrl,
+        aiCharacteristics,
+        reporterId: user.id,
+        caseType,
+        status: 'open',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      console.log("Case created successfully:", newCase);
+      res.json({ case: newCase });
+    } catch (error) {
+      logError('POST /api/cases', error);
+      res.status(500).json({
+        error: "Failed to create case",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
   // Text-based search endpoint
   app.get("/api/cases/search", async (req, res) => {
@@ -61,119 +204,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get all cases endpoint
-  app.get("/api/cases", async (req, res) => {
-    try {
-      const allCases = await db.query.cases.findMany({
-        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-      });
-      console.log(`Retrieved ${allCases.length} cases successfully`);
-      res.json(allCases);
-    } catch (error) {
-      console.error("Error fetching cases:", error);
-      res.status(500).json({
-        error: "Failed to fetch cases",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // Create case endpoint
-  app.post("/api/cases", upload.array("files"), async (req, res) => {
-    try {
-      console.log("Received case submission with body:", { ...req.body, files: req.files?.length || 0 });
-
-      const { 
-        childName, 
-        age, 
-        dateOfBirth,
-        hair,
-        eyes,
-        height,
-        weight,
-        description, 
-        contactInfo, 
-        reporterAddress,
-        location,
-        caseType = 'child_missing'
-      } = req.body;
-
-      // Validate required fields
-      if (!childName || !age || !description || !contactInfo || !reporterAddress || !location) {
-        console.log("Missing required fields:", { childName, age, description, contactInfo, reporterAddress, location });
-        return res.status(400).send("All required fields must be provided");
-      }
-
-      // Get or create user by address - normalize the address to lowercase
-      const normalizedAddress = reporterAddress.toLowerCase();
-      console.log("Looking up user with normalized address:", normalizedAddress);
-
-      let user = await db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.address, normalizedAddress)
-      });
-
-      if (!user) {
-        console.log("Creating new user for address:", normalizedAddress);
-        const [newUser] = await db.insert(users)
-          .values({ address: normalizedAddress })
-          .returning();
-        user = newUser;
-      }
-
-      console.log("User for case:", user);
-
-      // Handle image file
-      const imageFile = req.files?.find((file: any) => file.mimetype.startsWith('image/'));
-      let imageUrl;
-      let aiCharacteristics;
-
-      if (imageFile) {
-        try {
-          // Process with AI first
-          const analysis = await getImageDescription(imageFile.buffer);
-          aiCharacteristics = JSON.stringify(analysis.characteristics);
-
-          // Save to disk after AI processing
-          const filename = `${Date.now()}-${imageFile.originalname}`;
-          await fs.promises.writeFile(`./uploads/${filename}`, imageFile.buffer);
-          imageUrl = `/uploads/${filename}`;
-          console.log("Image saved successfully:", imageUrl);
-        } catch (error) {
-          console.error("Error processing image:", error);
-        }
-      }
-
-      // Create the case with all fields
-      const [newCase] = await db.insert(cases).values({
-        childName,
-        age: parseInt(age),
-        dateOfBirth: dateOfBirth || null,
-        hair: hair || null,
-        eyes: eyes || null,
-        height: height ? parseInt(height) : null,
-        weight: weight ? parseInt(weight) : null,
-        description,
-        location,
-        contactInfo,
-        imageUrl,
-        aiCharacteristics,
-        reporterId: user.id,
-        caseType,
-        status: 'open',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
-
-      console.log("Created new case:", newCase);
-      res.json({ case: newCase });
-    } catch (error) {
-      console.error("Error creating case:", error);
-      res.status(500).json({
-        error: "Failed to create case",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
 
   // Image-based search endpoint
   app.post("/api/cases/search/image", upload.single('file'), async (req, res) => {
