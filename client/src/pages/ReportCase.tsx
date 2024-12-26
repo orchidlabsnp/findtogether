@@ -27,21 +27,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { format } from "date-fns";
 
 const reportCaseSchema = z.object({
   childName: z.string().min(1, "Child's name is required"),
   age: z.number().min(0).max(18),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  hair: z.string().min(1, "Hair description is required"),
+  eyes: z.string().min(1, "Eye color is required"),
+  height: z.number().min(0).max(300, "Height must be between 0 and 300 cm"),
+  weight: z.number().min(0).max(200, "Weight must be between 0 and 200 kg"),
   location: z.string().min(1, "Location is required"),
   description: z.string().min(10, "Please provide more details"),
   contactInfo: z.string().min(1, "Contact information is required"),
@@ -56,53 +50,18 @@ export default function ReportCase() {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
-  const [showProfileCard, setShowProfileCard] = useState(true);
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
-  const [duplicateCase, setDuplicateCase] = useState<{
-    existingCase: any;
-    matchDetails: {
-      physicalMatch: number;
-      distinctiveFeatureMatch: number;
-      contactMatch: number;
-      overallSimilarity: number;
-    };
-  } | null>(null);
-
-  useEffect(() => {
-    const getWalletAddress = async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          if (accounts[0]) {
-            setCurrentAddress(accounts[0].toLowerCase());
-          }
-        } catch (error) {
-          console.error("Error getting wallet address:", error);
-          toast({
-            title: "Error",
-            description: "Failed to get wallet address",
-            variant: "destructive"
-          });
-          setLocation("/");
-        }
-      } else {
-        toast({
-          title: "MetaMask Required",
-          description: "Please install MetaMask to report cases",
-          variant: "destructive"
-        });
-        setLocation("/");
-      }
-    };
-
-    getWalletAddress();
-  }, []);
 
   const form = useForm<ReportCaseForm>({
     resolver: zodResolver(reportCaseSchema),
     defaultValues: {
       childName: "",
       age: 0,
+      dateOfBirth: "",
+      hair: "",
+      eyes: "",
+      height: 0,
+      weight: 0,
       location: "",
       description: "",
       contactInfo: "",
@@ -153,7 +112,6 @@ export default function ReportCase() {
         description: "The case has been successfully reported.",
       });
       setLocation("/find");
-      setShowProfileCard(false);
     },
     onError: (error) => {
       if (error.message.startsWith("DUPLICATE_CASE:")) {
@@ -168,6 +126,46 @@ export default function ReportCase() {
       }
     },
   });
+
+  const [duplicateCase, setDuplicateCase] = useState<{
+    existingCase: any;
+    matchDetails: {
+      physicalMatch: number;
+      distinctiveFeatureMatch: number;
+      contactMatch: number;
+      overallSimilarity: number;
+    };
+  } | null>(null);
+
+  useEffect(() => {
+    const getWalletAddress = async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          if (accounts[0]) {
+            setCurrentAddress(accounts[0].toLowerCase());
+          }
+        } catch (error) {
+          console.error("Error getting wallet address:", error);
+          toast({
+            title: "Error",
+            description: "Failed to get wallet address",
+            variant: "destructive"
+          });
+          setLocation("/");
+        }
+      } else {
+        toast({
+          title: "MetaMask Required",
+          description: "Please install MetaMask to report cases",
+          variant: "destructive"
+        });
+        setLocation("/");
+      }
+    };
+
+    getWalletAddress();
+  }, []);
 
   function formatSimilarity(value: number): string {
     return `${(value * 100).toFixed(1)}%`;
@@ -244,6 +242,90 @@ export default function ReportCase() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Age</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              value={field.value}
+                              className="w-full"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="dateOfBirth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date of Birth</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} className="w-full" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="hair"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Hair Description</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Color, length, style" className="w-full" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="eyes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Eye Color</FormLabel>
+                          <FormControl>
+                            <Input {...field} className="w-full" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="height"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Height (cm)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              value={field.value}
+                              className="w-full"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="weight"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Weight (kg)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"

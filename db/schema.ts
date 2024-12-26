@@ -19,6 +19,11 @@ export const cases = pgTable("cases", {
   id: serial("id").primaryKey(),
   childName: text("child_name").notNull(),
   age: integer("age").notNull(),
+  dateOfBirth: timestamp("date_of_birth"),
+  hair: text("hair"),
+  eyes: text("eyes"),
+  height: integer("height"), // in centimeters
+  weight: integer("weight"), // in kilograms
   location: text("location").notNull(),
   description: text("description").notNull(),
   contactInfo: text("contact_info").notNull(),
@@ -50,7 +55,12 @@ export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export const insertCaseSchema = createInsertSchema(cases).extend({
   status: CaseStatus.optional().default("open"),
-  caseType: CaseType
+  caseType: CaseType,
+  dateOfBirth: z.string().optional(),
+  hair: z.string().optional(),
+  eyes: z.string().optional(),
+  height: z.number().min(0).max(300).optional(), // max height in cm
+  weight: z.number().min(0).max(200).optional(), // max weight in kg
 });
 export const selectCaseSchema = createSelectSchema(cases).extend({
   status: CaseStatus,
