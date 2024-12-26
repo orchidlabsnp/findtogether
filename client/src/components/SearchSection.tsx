@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface SearchSectionProps {
   onSearch: (query: string, searchType: string, imageResults?: any[]) => void;
@@ -174,20 +175,49 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
             </div>
 
             <div className="flex gap-2">
-              <Button 
-                type="submit" 
-                className="whitespace-nowrap"
-                disabled={isSearching}
+              <motion.div
+                initial={false}
+                animate={{ 
+                  scale: isSearching ? 0.95 : 1,
+                  opacity: isSearching ? 0.8 : 1 
+                }}
+                whileTap={{ scale: 0.95 }}
               >
-                {isSearching ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : searchType === "location" ? (
-                  <MapPin className="h-4 w-4 mr-2" />
-                ) : (
-                  <Search className="h-4 w-4 mr-2" />
-                )}
-                {isSearching ? "Searching..." : selectedImage ? "Search with Image" : "Search"}
-              </Button>
+                <Button 
+                  type="submit" 
+                  className="whitespace-nowrap relative"
+                  disabled={isSearching}
+                >
+                  <AnimatePresence mode="wait">
+                    {isSearching ? (
+                      <motion.div
+                        key="loading"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="icon"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center"
+                      >
+                        {searchType === "location" ? (
+                          <MapPin className="h-4 w-4 mr-2" />
+                        ) : (
+                          <Search className="h-4 w-4 mr-2" />
+                        )}
+                        {selectedImage ? "Search with Image" : "Search"}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Button>
+              </motion.div>
               <div className="relative">
                 <Input
                   type="file"
@@ -212,7 +242,12 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
           </div>
 
           {selectedImage && imagePreview && (
-            <div className="bg-muted rounded-lg p-4 space-y-2">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-muted rounded-lg p-4 space-y-2"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FileImage className="h-4 w-4 text-muted-foreground" />
@@ -238,21 +273,29 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
                   className="rounded-lg w-full h-48 object-cover"
                 />
                 {isSearching && (
-                  <div className="absolute inset-0 bg-background/50 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 bg-background/50 backdrop-blur-sm rounded-lg flex items-center justify-center"
+                  >
                     <div className="text-center">
                       <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                       <p className="text-sm font-medium">Analyzing image...</p>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
               </div>
-            </div>
+            </motion.div>
           )}
         </form>
       </Card>
 
       {searchType === "image" && !selectedImage && (
-        <div className="text-center p-8 border-2 border-dashed rounded-lg bg-muted/50">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center p-8 border-2 border-dashed rounded-lg bg-muted/50"
+        >
           <FileImage className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">Upload an Image to Search</h3>
           <p className="text-sm text-muted-foreground mb-4">
@@ -267,7 +310,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
             <FileImage className="h-4 w-4 mr-2" />
             Choose Image
           </Button>
-        </div>
+        </motion.div>
       )}
     </div>
   );
