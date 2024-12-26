@@ -121,7 +121,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ delay: index * 0.1 }}
                     >
-                      <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200 max-w-xl mx-auto">
+                      <Card className="overflow-hidden hover:shadow-sm transition-shadow duration-200 max-w-[450px] mx-auto">
                         <CardContent className="p-2">
                           <div className="flex flex-col space-y-1.5">
                             {/* Header with Case ID and Status */}
@@ -198,6 +198,7 @@ export default function UserDashboard({ address }: UserDashboardProps) {
                           </div>
                         </CardContent>
                       </Card>
+                      
                     </motion.div>
                   ))}
                 </div>

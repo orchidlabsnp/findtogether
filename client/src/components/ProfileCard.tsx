@@ -50,7 +50,7 @@ export default function ProfileCard({ address, user }: ProfileCardProps) {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl mx-auto max-h-[90vh] overflow-y-auto overflow-x-clip flex flex-col item-center">
           <DialogHeader>
             <DialogTitle>Profile</DialogTitle>
           </DialogHeader>
