@@ -140,12 +140,12 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-6">
+      <Card className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -158,7 +158,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
                   onValueChange={setSearchType}
                   disabled={isSearching}
                 >
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Search type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -174,7 +174,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
               <motion.div
                 initial={false}
                 animate={{ 
@@ -185,7 +185,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
               >
                 <Button 
                   type="submit" 
-                  className="whitespace-nowrap relative"
+                  className="w-full sm:w-auto relative min-w-[120px] h-10"
                   disabled={isSearching}
                 >
                   <AnimatePresence mode="wait">
@@ -205,7 +205,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="flex items-center"
+                        className="flex items-center justify-center w-full"
                       >
                         {searchType === "location" ? (
                           <MapPin className="h-4 w-4 mr-2" />
@@ -233,6 +233,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
                   variant={selectedImage ? "secondary" : "outline"}
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isSearching}
+                  className="w-full sm:w-auto"
                 >
                   <FileImage className="h-4 w-4 mr-2" />
                   Upload Image
@@ -241,77 +242,82 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
             </div>
           </div>
 
-          {selectedImage && imagePreview && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-muted rounded-lg p-4 space-y-2"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileImage className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    {selectedImage.name}
-                  </span>
+          <AnimatePresence>
+            {selectedImage && imagePreview && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="bg-muted rounded-lg p-4"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <FileImage className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {selectedImage.name}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearImage}
+                    disabled={isSearching}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
+                <div className="relative w-full max-w-md mx-auto">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="rounded-lg w-full h-48 object-cover"
+                  />
+                  {isSearching && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="absolute inset-0 bg-background/50 backdrop-blur-sm rounded-lg flex items-center justify-center"
+                    >
+                      <div className="text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                        <p className="text-sm font-medium">Analyzing image...</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {searchType === "image" && !selectedImage && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="text-center p-8 border-2 border-dashed rounded-lg bg-muted/50"
+              >
+                <FileImage className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Upload an Image to Search</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upload a clear photo to search for similar cases in our database
+                </p>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearImage}
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
                   disabled={isSearching}
-                  className="h-8 w-8 p-0"
                 >
-                  <X className="h-4 w-4" />
+                  <FileImage className="h-4 w-4 mr-2" />
+                  Choose Image
                 </Button>
-              </div>
-              <div className="relative w-full max-w-md mx-auto">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="rounded-lg w-full h-48 object-cover"
-                />
-                {isSearching && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute inset-0 bg-background/50 backdrop-blur-sm rounded-lg flex items-center justify-center"
-                  >
-                    <div className="text-center">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                      <p className="text-sm font-medium">Analyzing image...</p>
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </form>
       </Card>
-
-      {searchType === "image" && !selectedImage && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center p-8 border-2 border-dashed rounded-lg bg-muted/50"
-        >
-          <FileImage className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-semibold mb-2">Upload an Image to Search</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Upload a clear photo to search for similar cases in our database
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isSearching}
-          >
-            <FileImage className="h-4 w-4 mr-2" />
-            Choose Image
-          </Button>
-        </motion.div>
-      )}
     </div>
   );
 }
