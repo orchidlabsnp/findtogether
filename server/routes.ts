@@ -61,6 +61,120 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get all cases endpoint
+  app.get("/api/cases", async (req, res) => {
+    try {
+      const allCases = await db.query.cases.findMany({
+        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+      });
+      console.log(`Retrieved ${allCases.length} cases successfully`);
+      res.json(allCases);
+    } catch (error) {
+      console.error("Error fetching cases:", error);
+      res.status(500).json({
+        error: "Failed to fetch cases",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Create case endpoint
+  app.post("/api/cases", upload.array("files"), async (req, res) => {
+    try {
+      console.log("Received case submission with body:", { ...req.body, files: req.files?.length || 0 });
+
+      const { 
+        childName, 
+        age, 
+        dateOfBirth,
+        hair,
+        eyes,
+        height,
+        weight,
+        description, 
+        contactInfo, 
+        reporterAddress,
+        location,
+        caseType = 'child_missing'
+      } = req.body;
+
+      // Validate required fields
+      if (!childName || !age || !description || !contactInfo || !reporterAddress || !location) {
+        console.log("Missing required fields:", { childName, age, description, contactInfo, reporterAddress, location });
+        return res.status(400).send("All required fields must be provided");
+      }
+
+      // Get or create user by address - normalize the address to lowercase
+      const normalizedAddress = reporterAddress.toLowerCase();
+      console.log("Looking up user with normalized address:", normalizedAddress);
+
+      let user = await db.query.users.findFirst({
+        where: (users, { eq }) => eq(users.address, normalizedAddress)
+      });
+
+      if (!user) {
+        console.log("Creating new user for address:", normalizedAddress);
+        const [newUser] = await db.insert(users)
+          .values({ address: normalizedAddress })
+          .returning();
+        user = newUser;
+      }
+
+      console.log("User for case:", user);
+
+      // Handle image file
+      const imageFile = req.files?.find((file: any) => file.mimetype.startsWith('image/'));
+      let imageUrl;
+      let aiCharacteristics;
+
+      if (imageFile) {
+        try {
+          // Process with AI first
+          const analysis = await getImageDescription(imageFile.buffer);
+          aiCharacteristics = JSON.stringify(analysis.characteristics);
+
+          // Save to disk after AI processing
+          const filename = `${Date.now()}-${imageFile.originalname}`;
+          await fs.promises.writeFile(`./uploads/${filename}`, imageFile.buffer);
+          imageUrl = `/uploads/${filename}`;
+          console.log("Image saved successfully:", imageUrl);
+        } catch (error) {
+          console.error("Error processing image:", error);
+        }
+      }
+
+      // Create the case with all fields
+      const [newCase] = await db.insert(cases).values({
+        childName,
+        age: parseInt(age),
+        dateOfBirth: dateOfBirth || null,
+        hair: hair || null,
+        eyes: eyes || null,
+        height: height ? parseInt(height) : null,
+        weight: weight ? parseInt(weight) : null,
+        description,
+        location,
+        contactInfo,
+        imageUrl,
+        aiCharacteristics,
+        reporterId: user.id,
+        caseType,
+        status: 'open',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      console.log("Created new case:", newCase);
+      res.json({ case: newCase });
+    } catch (error) {
+      console.error("Error creating case:", error);
+      res.status(500).json({
+        error: "Failed to create case",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Image-based search endpoint
   app.post("/api/cases/search/image", upload.single('file'), async (req, res) => {
     try {
@@ -139,132 +253,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/cases", async (req, res) => {
-    try {
-      const allCases = await db.query.cases.findMany({
-        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-      });
-      res.json(allCases);
-    } catch (error) {
-      console.error("Error fetching cases:", error);
-      res.status(500).send("Failed to fetch cases");
-    }
-  });
-
-  app.post("/api/cases", upload.array("files"), async (req, res) => {
-    try {
-      console.log("Received case submission with body:", { ...req.body, files: req.files?.length || 0 });
-
-      const { childName, age, description, contactInfo, reporterAddress } = req.body;
-      const files = req.files as Express.Multer.File[];
-
-      if (!childName || !age || !description || !contactInfo || !reporterAddress) {
-        console.log("Missing required fields:", { childName, age, description, contactInfo, reporterAddress });
-        return res.status(400).send("All fields are required");
-      }
-
-      // Get or create user by address - normalize the address to lowercase
-      const normalizedAddress = reporterAddress.toLowerCase();
-      console.log("Looking up user with normalized address:", normalizedAddress);
-
-      let user = await db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.address, normalizedAddress)
-      });
-
-      if (!user) {
-        console.log("Creating new user for address:", normalizedAddress);
-        const [newUser] = await db.insert(users)
-          .values({ address: normalizedAddress })
-          .returning();
-        user = newUser;
-      }
-
-      console.log("User for case:", user);
-
-      // Get the first image file to use as the main image
-      const imageFile = files?.find(file => file.mimetype.startsWith('image/'));
-      let imageUrl;
-      let aiCharacteristics;
-
-      if (imageFile) {
-        try {
-          // Process with AI first
-          const analysis = await getImageDescription(imageFile.buffer);
-          aiCharacteristics = JSON.stringify(analysis.characteristics);
-
-          // Save to disk after AI processing
-          const filename = `${Date.now()}-${imageFile.originalname}`;
-          await fs.promises.writeFile(`./uploads/${filename}`, imageFile.buffer);
-          imageUrl = `/uploads/${filename}`;
-          console.log("Image saved successfully:", imageUrl);
-        } catch (error) {
-          console.error("Error processing image:", error);
-        }
-      }
-
-      // Check for similar existing cases - This logic remains largely unchanged
-      const existingCases = await db.query.cases.findMany();
-      const newCaseData = {
-        childName,
-        description,
-        contactInfo,
-        imageUrl,
-      };
-
-      for (const existingCase of existingCases) {
-        const matchDetails = await compareCases(newCaseData, existingCase);
-
-        // If overall similarity is high, return the match details
-        if (matchDetails.overallSimilarity > 0.8) {
-          return res.status(409).json({
-            message: "Similar case already exists",
-            existingCase,
-            matchDetails,
-          });
-        }
-      }
-
-      console.log("Creating case with reporterId:", user.id);
-
-      const [newCase] = await db.insert(cases).values({
-        childName,
-        age: parseInt(age),
-        description,
-        contactInfo,
-        imageUrl,
-        aiCharacteristics,
-        reporterId: user.id,
-        status: 'open',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
-
-      console.log("Created new case:", newCase);
-
-      // Analyze the case and send notifications if necessary
-      try {
-        const analysisResult = await analyzeAndNotify(newCase);
-        res.json({
-          case: newCase,
-          analysis: analysisResult
-        });
-      } catch (notificationError) {
-        console.error("Error in notification system:", notificationError);
-        // Still return success since the case was created
-        res.json({
-          case: newCase,
-          analysis: {
-            status: 'created',
-            message: 'Case created successfully, but notification system encountered an error'
-          }
-        });
-      }
-    } catch (error) {
-      console.error("Error creating case:", error);
-      res.status(500).send("Failed to create case");
-    }
-  });
-
   app.get("/api/cases/user/:address", async (req, res) => {
     try {
       const { address } = req.params;
@@ -293,7 +281,10 @@ export function registerRoutes(app: Express): Server {
       res.json(userCases);
     } catch (error) {
       console.error("Error fetching user cases:", error);
-      res.status(500).send("Failed to fetch user cases");
+      res.status(500).json({
+        error: "Failed to fetch user cases",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
@@ -324,7 +315,10 @@ export function registerRoutes(app: Express): Server {
       }
     } catch (error) {
       console.error("Error handling user:", error);
-      res.status(500).send("Failed to handle user");
+      res.status(500).json({
+        error: "Failed to handle user",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
@@ -350,7 +344,10 @@ export function registerRoutes(app: Express): Server {
       res.json(updatedCase);
     } catch (error) {
       console.error("Error updating case status:", error);
-      res.status(500).send("Failed to update case status");
+      res.status(500).json({
+        error: "Failed to update case status",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
