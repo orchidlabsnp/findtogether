@@ -6,7 +6,7 @@ import { Shield, Users, Book, Bell, ArrowRight } from "lucide-react";
 export default function Home() {
   return (
     <div className="min-h-screen">
-      <section className="relative h-[600px] flex items-center">
+      <section className="relative h-[500px] flex items-center">
         <div className="absolute inset-0">
           <img
             src="https://images.unsplash.com/photo-1489710437720-ebb67ec84dd2"
