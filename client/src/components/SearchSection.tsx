@@ -28,11 +28,14 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Don't proceed if already searching
+    if (isSearching) return;
+
     try {
-      if (searchType === "image" && selectedImage) {
+      // Handle image search
+      if (selectedImage) {
         console.log('Starting image search with file:', selectedImage.name);
 
-        // Create form data
         const formData = new FormData();
         formData.append("files", selectedImage);
         formData.append("searchType", "image");
@@ -59,16 +62,20 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
         const results = await response.json();
         console.log('Search results:', results);
 
-        // Clear the file input and selected image after successful search
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-        setSelectedImage(null);
-        setImagePreview(null);
-
         onSearch("", "image", results);
-      } else if (searchType.startsWith('child_')) {
+        return;
+      }
+
+      // Handle other search types
+      if (searchType.startsWith('child_')) {
         onSearch(searchType, 'case_type');
+      } else if (!query.trim() && searchType !== "image") {
+        toast({
+          title: "Search Error",
+          description: "Please enter a search term or upload an image",
+          variant: "destructive",
+        });
+        return;
       } else {
         onSearch(query, searchType);
       }
@@ -154,7 +161,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
                 ) : (
                   <Search className="h-4 w-4 mr-2" />
                 )}
-                {isSearching ? "Searching..." : "Search"}
+                {isSearching ? "Searching..." : selectedImage ? "Search with Image" : "Search"}
               </Button>
               <div className="relative">
                 <Input
