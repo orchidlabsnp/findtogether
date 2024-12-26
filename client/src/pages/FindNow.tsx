@@ -4,7 +4,7 @@ import SearchSection from "@/components/SearchSection";
 import CaseCard from "@/components/CaseCard";
 import { useQuery } from "@tanstack/react-query";
 import type { Case } from "@db/schema";
-import { Loader2, ImageIcon } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface SearchSectionProps {
@@ -17,12 +17,12 @@ const getStatusPriority = (status: string): number => {
     case 'open': return 0;
     case 'investigating': return 1;
     case 'resolved': return 2;
-    default: return 3; // Any other status will be at the end
+    default: return 3;
   }
 };
 
 export default function FindNow() {
-  const [searchParams, setSearchParams] = useState({ query: "", type: "all" });
+  const [searchParams, setSearchParams] = useState({ query: "", type: "text" });
   const [imageResults, setImageResults] = useState<Case[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
@@ -30,7 +30,7 @@ export default function FindNow() {
   const { data: cases, isLoading } = useQuery<Case[]>({
     queryKey: [
       searchParams.query 
-        ? `/api/cases/search?query=${searchParams.query}&searchType=${searchParams.type}` 
+        ? `/api/cases/search?query=${encodeURIComponent(searchParams.query)}` 
         : "/api/cases"
     ],
     enabled: !imageResults, // Disable the query when we have image results
