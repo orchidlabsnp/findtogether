@@ -228,7 +228,7 @@ export default function CaseDetail() {
                         <div>
                           <p className="font-medium text-red-700">Last Seen</p>
                           <p className="text-sm text-red-600 font-medium">
-                            November 24, 2023 at 9:40 AM
+                            {case_.createdAt ? format(new Date(case_.createdAt), "PPP 'at' p") : 'Date not available'}
                           </p>
                         </div>
                       </div>
@@ -239,21 +239,19 @@ export default function CaseDetail() {
                         <div>
                           <p className="font-medium text-red-700">Location</p>
                           <p className="text-sm text-red-600">
-                            Upper Riverdale Road in Riverdale, Georgia
+                            {case_.location || 'Location not specified'}
                           </p>
                         </div>
                       </div>
 
-                      {/* Last Seen Wearing */}
+                      {/* Description & Last Seen Wearing */}
                       <div className="flex items-start gap-3">
                         <User className="h-5 w-5 mt-0.5 text-red-500" />
                         <div>
-                          <p className="font-medium text-red-700">Last Seen Wearing</p>
-                          <ul className="text-sm text-red-600 list-disc ml-4">
-                            <li>Ankle-length white puffy jacket with fur on the hood</li>
-                            <li>Gray sweatpants</li>
-                            <li>Hair up</li>
-                          </ul>
+                          <p className="font-medium text-red-700">Description</p>
+                          <p className="text-sm text-red-600 whitespace-pre-wrap">
+                            {case_.description || 'No description available'}
+                          </p>
                         </div>
                       </div>
 
@@ -262,8 +260,14 @@ export default function CaseDetail() {
                         <p className="font-semibold text-red-800">Emergency Contacts:</p>
                         <div className="flex items-center gap-2">
                           <PhoneCall className="h-4 w-4 text-red-500" />
-                          <a href="tel:1-770-477-3550" className="text-red-600 hover:underline font-medium">
-                            Clayton County Police Department: 1-770-477-3550
+                          <a href={`tel:${case_.contactInfo}`} className="text-red-600 hover:underline font-medium">
+                            Primary Contact: {case_.contactInfo}
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <PhoneCall className="h-4 w-4 text-red-500" />
+                          <a href="tel:911" className="text-red-600 hover:underline font-medium">
+                            Emergency: 911
                           </a>
                         </div>
                         <div className="flex items-center gap-2">
