@@ -1,8 +1,8 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { cases } from "@db/schema";
-import { ilike, or } from "drizzle-orm";
+import { cases, users } from "@db/schema";
+import { eq, ilike, or } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -59,7 +59,7 @@ export function registerRoutes(app: Express): Server {
       console.log("Looking up user with normalized address:", normalizedAddress);
 
       let user = await db.query.users.findFirst({
-        where: eq(users.address, normalizedAddress)
+        where: (users, { eq }) => eq(users.address, normalizedAddress)
       });
 
       if (!user) {
@@ -164,7 +164,7 @@ export function registerRoutes(app: Express): Server {
 
       // First, find the user by normalized address
       const user = await db.query.users.findFirst({
-        where: eq(users.address, normalizedAddress)
+        where: (users, { eq }) => eq(users.address, normalizedAddress)
       });
 
       if (!user) {
@@ -174,14 +174,13 @@ export function registerRoutes(app: Express): Server {
 
       console.log("Found user:", user);
 
-      // Get cases for this user with all details using a direct query
-      const userCases = await db.select()
-        .from(cases)
-        .where(eq(cases.reporterId, user.id))
-        .orderBy(cases.createdAt);
+      // Get cases for this user
+      const userCases = await db.query.cases.findMany({
+        where: (cases, { eq }) => eq(cases.reporterId, user.id),
+        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+      });
 
-      console.log("Found cases for user:", userCases.length);
-
+      console.log(`Found ${userCases.length} cases for user`);
       res.json(userCases);
     } catch (error) {
       console.error("Error fetching user cases:", error);
@@ -195,7 +194,7 @@ export function registerRoutes(app: Express): Server {
         method: req.method,
         searchType: req.body.searchType,
         hasFile: !!req.file,
-        query: req.body.query,
+        query: req.body.query
       });
 
       const { searchType } = req.body;
@@ -340,20 +339,32 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/users", async (req, res) => {
-    const { address } = req.body;
-    const normalizedAddress = address.toLowerCase();
+    try {
+      const { address } = req.body;
+      if (!address) {
+        return res.status(400).send("Address is required");
+      }
 
-    const existingUser = await db.query.users.findFirst({
-      where: eq(users.address, normalizedAddress)
-    });
+      const normalizedAddress = address.toLowerCase();
+      console.log("Creating/fetching user for address:", normalizedAddress);
 
-    if (existingUser) {
-      res.json(existingUser);
-    } else {
-      const [newUser] = await db.insert(users)
-        .values({ address: normalizedAddress })
-        .returning();
-      res.json(newUser);
+      const existingUser = await db.query.users.findFirst({
+        where: (users, { eq }) => eq(users.address, normalizedAddress)
+      });
+
+      if (existingUser) {
+        console.log("Found existing user:", existingUser);
+        res.json(existingUser);
+      } else {
+        console.log("Creating new user for address:", normalizedAddress);
+        const [newUser] = await db.insert(users)
+          .values({ address: normalizedAddress })
+          .returning();
+        res.json(newUser);
+      }
+    } catch (error) {
+      console.error("Error handling user:", error);
+      res.status(500).send("Failed to handle user");
     }
   });
 
