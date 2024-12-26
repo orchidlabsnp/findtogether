@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { cases, users } from "@db/schema";
-import { eq, ilike, or } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -29,6 +29,115 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
+
+  // Text-based search endpoint
+  app.get("/api/cases/search", async (req, res) => {
+    try {
+      const { query } = req.query;
+
+      if (!query) {
+        const allCases = await db.query.cases.findMany({
+          orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+        });
+        return res.json(allCases);
+      }
+
+      console.log('Performing name search:', { query });
+
+      const searchResults = await db.query.cases.findMany({
+        where: (cases, { ilike }) => 
+          ilike(cases.childName, `%${query}%`),
+        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+      });
+
+      console.log(`Name search complete. Found ${searchResults.length} results`);
+      res.json(searchResults);
+    } catch (error) {
+      console.error('Name search error:', error);
+      res.status(500).json({
+        error: "Error performing name search",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Image-based search endpoint
+  app.post("/api/cases/search/image", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          error: "No image provided",
+          details: "Please upload an image to search"
+        });
+      }
+
+      console.log('Processing image search:', {
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      });
+
+      // Process image with AI
+      console.log('Starting AI image analysis...');
+      const imageAnalysis = await getImageDescription(req.file.buffer);
+      console.log('AI analysis completed:', imageAnalysis);
+
+      // Get all cases for comparison
+      const allCases = await db.query.cases.findMany({
+        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+      });
+      console.log(`Found ${allCases.length} cases for comparison`);
+
+      // Compare image with each case
+      const casesWithScores = await Promise.all(
+        allCases.map(async (case_) => {
+          try {
+            if (!case_.imageUrl) {
+              return { ...case_, similarity: 0 };
+            }
+
+            const casePath = path.join(process.cwd(), case_.imageUrl.replace(/^\//, ''));
+            if (!fs.existsSync(casePath)) {
+              return { ...case_, similarity: 0 };
+            }
+
+            const caseImageBuffer = await fs.promises.readFile(casePath);
+            const characteristics = case_.aiCharacteristics ? 
+              JSON.parse(case_.aiCharacteristics) : undefined;
+
+            const comparison = await compareImageWithDescription(
+              caseImageBuffer,
+              case_.description,
+              characteristics
+            );
+
+            return { 
+              ...case_,
+              similarity: comparison.similarity
+            };
+          } catch (error) {
+            console.error(`Error processing case ${case_.id}:`, error);
+            return { ...case_, similarity: 0 };
+          }
+        })
+      );
+
+      // Filter and sort results
+      const searchResults = casesWithScores
+        .filter(case_ => case_.similarity > 0.4)
+        .sort((a, b) => b.similarity - a.similarity);
+
+      console.log(`Image search complete. Found ${searchResults.length} similar cases`);
+      res.json(searchResults);
+
+    } catch (error) {
+      console.error('Image search error:', error);
+      res.status(500).json({
+        error: "Error processing image search",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
   app.get("/api/cases", async (req, res) => {
     try {
@@ -188,35 +297,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/cases/search", async (req, res) => {
-    try {
-      const { query } = req.query;
-
-      if (!query) {
-        const allCases = await db.query.cases.findMany({
-          orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-        });
-        return res.json(allCases);
-      }
-
-      console.log('Performing name search:', { query });
-
-      const searchResults = await db.query.cases.findMany({
-        where: (cases, { ilike }) => 
-          ilike(cases.childName, `%${query}%`),
-        orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-      });
-
-      console.log(`Name search complete. Found ${searchResults.length} results`);
-      res.json(searchResults);
-    } catch (error) {
-      console.error('Name search error:', error);
-      res.status(500).json({
-        error: "Error performing name search",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
 
   app.post("/api/users", async (req, res) => {
     try {

@@ -36,11 +36,10 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
         });
 
         const formData = new FormData();
-        formData.append("files", selectedImage);
-        formData.append("searchType", "image");
+        formData.append("file", selectedImage);
 
         console.log("Sending image search POST request");
-        const response = await fetch("/api/cases/search", {
+        const response = await fetch("/api/cases/search/image", {
           method: "POST",
           body: formData,
         });
@@ -48,14 +47,14 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
         console.log("Image search response status:", response.status);
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Image search failed:", errorText);
+          const errorData = await response.json();
+          console.error("Image search failed:", errorData);
           toast({
             title: "Search Failed",
-            description: `Failed to process image search: ${errorText}`,
+            description: errorData.details || "Failed to process image search",
             variant: "destructive",
           });
-          throw new Error(errorText);
+          throw new Error(errorData.details || "Failed to process image search");
         }
 
         const results = await response.json();
