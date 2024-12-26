@@ -1,14 +1,7 @@
 import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, FileImage, X, Loader2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Search, FileImage, X, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,7 +13,6 @@ interface SearchSectionProps {
 
 export default function SearchSection({ onSearch, isSearching = false }: SearchSectionProps) {
   const [query, setQuery] = useState("");
-  const [searchType, setSearchType] = useState("all");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,7 +20,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Search form submitted:", { searchType, hasImage: !!selectedImage, query });
+    console.log("Search form submitted:", { hasImage: !!selectedImage, query });
 
     if (isSearching) {
       console.log("Search already in progress, ignoring submission");
@@ -47,7 +39,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
         formData.append("files", selectedImage);
         formData.append("searchType", "image");
 
-        console.log("Sending image search POST request to /api/cases/search");
+        console.log("Sending image search POST request");
         const response = await fetch("/api/cases/search", {
           method: "POST",
           body: formData,
@@ -72,29 +64,19 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
         return;
       }
 
-      // Handle text-based searches
-      if (!query.trim() && searchType !== "image") {
-        console.log("Empty query for non-image search");
+      // Handle name search
+      if (!query.trim()) {
+        console.log("Empty query for name search");
         toast({
           title: "Search Error",
-          description: "Please enter a search term or upload an image",
+          description: "Please enter a name to search or upload an image",
           variant: "destructive",
         });
         return;
       }
 
-      console.log("Performing text-based search:", { searchType, query });
-
-      // For case type searches
-      if (searchType.startsWith('child_')) {
-        console.log("Performing case type search");
-        onSearch(searchType, 'case_type');
-        return;
-      }
-
-      // For all other searches
-      console.log("Performing general search");
-      onSearch(query, searchType);
+      console.log("Performing name search:", { query });
+      onSearch(query, "text");
 
     } catch (error) {
       console.error("Search error:", error);
@@ -117,7 +99,6 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
       });
 
       setSelectedImage(file);
-      setSearchType("image");
 
       // Create preview URL
       const reader = new FileReader();
@@ -136,7 +117,6 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    setSearchType("all");
   };
 
   return (
@@ -145,33 +125,13 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Enter search terms..."
-                  className="flex-1"
-                  disabled={searchType === "image" || isSearching}
-                />
-                <Select 
-                  value={searchType} 
-                  onValueChange={setSearchType}
-                  disabled={isSearching}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Search type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="location">Location</SelectItem>
-                    <SelectItem value="case_type">Case Type</SelectItem>
-                    <SelectItem value="child_missing">Missing Child</SelectItem>
-                    <SelectItem value="child_labour">Child Labor</SelectItem>
-                    <SelectItem value="child_harassment">Child Harassment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Enter child's name..."
+                className="flex-1"
+                disabled={isSearching}
+              />
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
@@ -207,11 +167,7 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
                         exit={{ opacity: 0 }}
                         className="flex items-center justify-center w-full"
                       >
-                        {searchType === "location" ? (
-                          <MapPin className="h-4 w-4 mr-2" />
-                        ) : (
-                          <Search className="h-4 w-4 mr-2" />
-                        )}
+                        <Search className="h-4 w-4 mr-2" />
                         {selectedImage ? "Search with Image" : "Search"}
                       </motion.div>
                     )}
@@ -292,27 +248,18 @@ export default function SearchSection({ onSearch, isSearching = false }: SearchS
           </AnimatePresence>
 
           <AnimatePresence>
-            {searchType === "image" && !selectedImage && (
+            {!selectedImage && !query && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="text-center p-8 border-2 border-dashed rounded-lg bg-muted/50"
               >
-                <FileImage className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Upload an Image to Search</h3>
+                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Search by Name or Image</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Upload a clear photo to search for similar cases in our database
+                  Enter a name to search or upload a photo to find similar cases
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isSearching}
-                >
-                  <FileImage className="h-4 w-4 mr-2" />
-                  Choose Image
-                </Button>
               </motion.div>
             )}
           </AnimatePresence>

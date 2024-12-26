@@ -1,22 +1,12 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { cases, users } from "@db/schema";
-import { eq, ilike, or } from "drizzle-orm";
+import { cases } from "@db/schema";
+import { ilike, or } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
-import { initializeNotificationService } from "./services/notifications";
-import { analyzeAndNotify } from "./services/reportAnalysis";
-import { compareCases } from "./services/caseMatching";
-
-const storage = multer.diskStorage({
-  destination: "./uploads",
-  filename: function (req, file, cb) {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
 
 // Ensure uploads directory exists
 if (!fs.existsSync('./uploads')) {
@@ -52,15 +42,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-app.post("/api/cases", upload.array("files"), async (req, res) => {
+  app.post("/api/cases", upload.array("files"), async (req, res) => {
     try {
       console.log("Received case submission with body:", { ...req.body, files: req.files?.length || 0 });
 
-      const { childName, age, location, description, contactInfo, caseType, reporterAddress } = req.body;
+      const { childName, age, description, contactInfo, reporterAddress } = req.body;
       const files = req.files as Express.Multer.File[];
 
-      if (!childName || !age || !location || !description || !contactInfo || !caseType || !reporterAddress) {
-        console.log("Missing required fields:", { childName, age, location, description, contactInfo, caseType, reporterAddress });
+      if (!childName || !age || !description || !contactInfo || !reporterAddress) {
+        console.log("Missing required fields:", { childName, age, description, contactInfo, reporterAddress });
         return res.status(400).send("All fields are required");
       }
 
@@ -103,7 +93,7 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
         }
       }
 
-      // Check for similar existing cases
+      // Check for similar existing cases - This logic remains largely unchanged
       const existingCases = await db.query.cases.findMany();
       const newCaseData = {
         childName,
@@ -130,10 +120,8 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
       const [newCase] = await db.insert(cases).values({
         childName,
         age: parseInt(age),
-        location,
         description,
         contactInfo,
-        caseType,
         imageUrl,
         aiCharacteristics,
         reporterId: user.id,
@@ -166,7 +154,7 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
       console.error("Error creating case:", error);
       res.status(500).send("Failed to create case");
     }
-});
+  });
 
   app.get("/api/cases/user/:address", async (req, res) => {
     try {
@@ -208,7 +196,6 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
         searchType: req.body.searchType,
         hasFile: !!req.file,
         query: req.body.query,
-        contentType: req.headers['content-type'],
       });
 
       const { searchType } = req.body;
@@ -228,12 +215,6 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
             size: file.size,
             mimetype: file.mimetype
           });
-
-          // Ensure uploads directory exists
-          if (!fs.existsSync('./uploads')) {
-            console.log('Creating uploads directory');
-            fs.mkdirSync('./uploads', { recursive: true });
-          }
 
           // Save image to disk
           const filename = `${Date.now()}-${file.originalname}`;
@@ -318,69 +299,42 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
           console.error('Image search processing error:', error);
           return res.status(500).json({
             error: "Error processing image search",
-            details: error.message
+            details: error instanceof Error ? error.message : "Unknown error"
           });
         }
       }
 
-      // Handle text-based searches
-      let searchResults;
-      console.log('Processing text-based search:', { searchType, query });
-
+      // Handle name-based search
       try {
-        switch (searchType) {
-          case 'location':
-            searchResults = await db.query.cases.findMany({
-              where: (cases, { ilike }) => ilike(cases.location, `%${query}%`),
-              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-            });
-            break;
-
-          case 'case_type':
-            searchResults = await db.query.cases.findMany({
-              where: (cases, { eq }) => eq(cases.caseType, query as string),
-              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-            });
-            break;
-
-          case 'text':
-            searchResults = await db.query.cases.findMany({
-              where: (cases, { or, ilike }) => 
-                or(
-                  ilike(cases.childName, `%${query}%`),
-                  ilike(cases.description, `%${query}%`),
-                  ilike(cases.caseType, `%${query}%`)
-                ),
-              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-            });
-            break;
-
-          default:
-            searchResults = await db.query.cases.findMany({
-              where: (cases, { or, ilike }) => 
-                or(
-                  ilike(cases.childName, `%${query}%`),
-                  ilike(cases.location, `%${query}%`),
-                  ilike(cases.description, `%${query}%`)
-                ),
-              orderBy: (cases, { desc }) => [desc(cases.createdAt)]
-            });
+        if (!query?.trim()) {
+          return res.status(400).json({
+            error: "Invalid search",
+            details: "Please provide a name to search"
+          });
         }
 
-        console.log(`Text search complete. Found ${searchResults.length} results`);
+        console.log('Performing name search:', { query });
+
+        const searchResults = await db.query.cases.findMany({
+          where: (cases, { ilike }) => 
+            ilike(cases.childName, `%${query}%`),
+          orderBy: (cases, { desc }) => [desc(cases.createdAt)]
+        });
+
+        console.log(`Name search complete. Found ${searchResults.length} results`);
         res.json(searchResults);
       } catch (error) {
-        console.error('Text search error:', error);
+        console.error('Name search error:', error);
         res.status(500).json({
-          error: "Error performing text search",
-          details: error.message
+          error: "Error performing name search",
+          details: error instanceof Error ? error.message : "Unknown error"
         });
       }
     } catch (error) {
       console.error('Search endpoint error:', error);
       res.status(500).json({
         error: "Search operation failed",
-        details: error.message
+        details: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
@@ -431,9 +385,5 @@ app.post("/api/cases", upload.array("files"), async (req, res) => {
 
 
   const httpServer = createServer(app);
-
-  // Initialize notification service
-  initializeNotificationService(httpServer);
-
   return httpServer;
 }
