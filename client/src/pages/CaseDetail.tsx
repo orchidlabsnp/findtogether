@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   MapPinned,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -199,25 +199,64 @@ export default function CaseDetail() {
                       Case Description
                     </h2>
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="relative">
-                        <p className={`text-muted-foreground whitespace-pre-wrap leading-relaxed ${!isDescriptionExpanded ? 'line-clamp-3' : ''}`}>
-                          {case_.description}
-                        </p>
-                        {case_.description && case_.description.length > 150 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="mt-2 text-primary hover:text-primary"
-                            onClick={toggleDescription}
+                      <motion.div
+                        className="relative"
+                        initial={false}
+                        animate={{ height: "auto" }}
+                      >
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={isDescriptionExpanded ? "expanded" : "collapsed"}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
                           >
-                            {isDescriptionExpanded ? (
-                              <><ChevronUp className="h-4 w-4 mr-1" /> Show Less</>
-                            ) : (
-                              <><ChevronDown className="h-4 w-4 mr-1" /> Show More</>
-                            )}
-                          </Button>
+                            <p
+                              className={`
+                                text-muted-foreground
+                                whitespace-pre-wrap
+                                leading-relaxed
+                                ${!isDescriptionExpanded ? "line-clamp-3" : ""}
+                                ${!isDescriptionExpanded
+                                  ? "relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-12 after:bg-gradient-to-t after:from-gray-50 after:to-transparent"
+                                  : ""}
+                              `}
+                            >
+                              {case_.description}
+                            </p>
+                          </motion.div>
+                        </AnimatePresence>
+
+                        {case_.description && case_.description.length > 150 && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="mt-2 flex justify-center"
+                          >
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="group relative"
+                              onClick={toggleDescription}
+                            >
+                              <span className="flex items-center gap-1">
+                                {isDescriptionExpanded ? (
+                                  <>
+                                    <ChevronUp className="h-4 w-4 transition-transform group-hover:-translate-y-0.5" />
+                                    Show Less
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
+                                    Show More
+                                  </>
+                                )}
+                              </span>
+                            </Button>
+                          </motion.div>
                         )}
-                      </div>
+                      </motion.div>
                     </div>
                   </div>
                 </div>
@@ -252,11 +291,13 @@ export default function CaseDetail() {
                           <p className="mb-4">{case_.narrative}</p>
                         ) : (
                           <p className="mb-4">
-                            <span className="font-medium">{case_.childName}</span> was last seen on{' '}
+                            <span className="font-medium">{case_.childName}</span> was last seen on{" "}
                             <span className="font-medium">
-                              {case_.createdAt ? format(new Date(case_.createdAt), "MMMM d, yyyy 'at' h:mmaaa") : 'Unknown date'}{' '}
+                              {case_.createdAt
+                                ? format(new Date(case_.createdAt), "MMMM d, yyyy 'at' h:mmaaa")
+                                : "Unknown date"}{" "}
                             </span>
-                            at <span className="font-medium">{case_.location}</span>.{' '}
+                            at <span className="font-medium">{case_.location}</span>.{" "}
                             {case_.height && case_.weight && (
                               <>They are approximately {case_.height}cm tall and weigh {case_.weight}kg. </>
                             )}
@@ -354,13 +395,13 @@ function LoadingSkeleton() {
 
 function getStatusColor(status: string | null) {
   switch (status?.toLowerCase()) {
-    case 'open':
-      return 'bg-red-100 text-red-800';
-    case 'investigating':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'resolved':
-      return 'bg-green-100 text-green-800';
+    case "open":
+      return "bg-red-100 text-red-800";
+    case "investigating":
+      return "bg-yellow-100 text-yellow-800";
+    case "resolved":
+      return "bg-green-100 text-green-800";
     default:
-      return 'bg-gray-100 text-gray-800';
+      return "bg-gray-100 text-gray-800";
   }
 }
