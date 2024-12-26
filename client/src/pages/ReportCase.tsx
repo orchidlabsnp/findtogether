@@ -27,6 +27,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const reportCaseSchema = z.object({
   childName: z.string().min(1, "Child's name is required"),
@@ -192,160 +203,41 @@ export default function ReportCase() {
 
   return (
     <div className="min-h-screen w-full bg-background py-8 px-4 sm:px-6 lg:px-8">
-      {showProfileCard && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="max-w-2xl mx-auto"
-        >
-          <Card className="relative shadow-lg">
-            {isPending && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg"
-              >
-                <div className="flex flex-col items-center gap-4 p-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm font-medium">Processing your report...</p>
-                </div>
-              </motion.div>
-            )}
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold text-center">Report Case</CardTitle>
-              <p className="text-center text-muted-foreground">
-                Please provide accurate information to help us locate the child
-              </p>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="childName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Child's Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="w-full" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="age"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Age</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              value={field.value}
-                              className="w-full"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="max-w-2xl mx-auto"
+      >
+        <Card className="relative shadow-lg">
+          {isPending && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg"
+            >
+              <div className="flex flex-col items-center gap-4 p-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm font-medium">Processing your report...</p>
+              </div>
+            </motion.div>
+          )}
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">Report Case</CardTitle>
+            <p className="text-center text-muted-foreground">
+              Please provide accurate information to help us locate the child
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
-                    name="dateOfBirth"
+                    name="childName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Date of Birth</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} className="w-full" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="hair"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hair Description</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Color, length, style" className="w-full" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="eyes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Eye Color</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="w-full" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="height"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Height (cm)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              value={field.value}
-                              className="w-full"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="weight"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Weight (kg)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              value={field.value}
-                              className="w-full"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Known Location</FormLabel>
+                        <FormLabel>Child's Name</FormLabel>
                         <FormControl>
                           <Input {...field} className="w-full" />
                         </FormControl>
@@ -356,15 +248,81 @@ export default function ReportCase() {
 
                   <FormField
                     control={form.control}
-                    name="description"
+                    name="age"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>Age</FormLabel>
                         <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Please provide details about the circumstances..."
-                            className="min-h-[100px] w-full"
+                          <Input
+                            type="number"
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            value={field.value}
+                            className="w-full"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="dateOfBirth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date of Birth</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} className="w-full" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="hair"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hair Description</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Color, length, style" className="w-full" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="eyes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Eye Color</FormLabel>
+                        <FormControl>
+                          <Input {...field} className="w-full" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="height"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Height (cm)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            value={field.value}
+                            className="w-full"
                           />
                         </FormControl>
                         <FormMessage />
@@ -374,93 +332,145 @@ export default function ReportCase() {
 
                   <FormField
                     control={form.control}
-                    name="caseType"
+                    name="weight"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Case Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select case type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="child_missing">Missing Child</SelectItem>
-                            <SelectItem value="child_labour">Child Labour</SelectItem>
-                            <SelectItem value="child_harassment">Child Harassment</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="contactInfo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Information</FormLabel>
+                        <FormLabel>Weight (kg)</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Phone number or email" className="w-full" />
+                          <Input
+                            type="number"
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            value={field.value}
+                            className="w-full"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="files">Upload Images/Videos</Label>
-                    <Input
-                      id="files"
-                      type="file"
-                      ref={fileRef}
-                      multiple
-                      accept="image/*,video/*"
-                      className="cursor-pointer file:mr-4 file:py-2 file:px-4
-                        file:rounded-full file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-primary file:text-primary-foreground
-                        hover:file:bg-primary/90"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      You can upload multiple images and videos
-                    </p>
-                  </div>
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Known Location</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="w-full" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  <Button
-                    type="submit"
-                    className="w-full relative"
-                    disabled={isPending}
-                  >
-                    <AnimatePresence mode="wait">
-                      {isPending ? (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="flex items-center justify-center gap-2"
-                        >
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Processing...</span>
-                        </motion.div>
-                      ) : (
-                        <motion.span
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                        >
-                          Submit Report
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="Please provide details about the circumstances..."
+                          className="min-h-[100px] w-full"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="caseType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Case Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select case type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="child_missing">Missing Child</SelectItem>
+                          <SelectItem value="child_labour">Child Labour</SelectItem>
+                          <SelectItem value="child_harassment">Child Harassment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactInfo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Information</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Phone number or email" className="w-full" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-2">
+                  <Label htmlFor="files">Upload Images/Videos</Label>
+                  <Input
+                    id="files"
+                    type="file"
+                    ref={fileRef}
+                    multiple
+                    accept="image/*,video/*"
+                    className="cursor-pointer file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-primary file:text-primary-foreground
+                      hover:file:bg-primary/90"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    You can upload multiple images and videos
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full relative"
+                  disabled={isPending}
+                >
+                  <AnimatePresence mode="wait">
+                    {isPending ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center justify-center gap-2"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Processing...</span>
+                      </motion.div>
+                    ) : (
+                      <motion.span
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        Submit Report
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {duplicateCase && (
         <AlertDialog open={!!duplicateCase} onOpenChange={() => setDuplicateCase(null)}>
           <AlertDialogContent className="max-w-2xl">
