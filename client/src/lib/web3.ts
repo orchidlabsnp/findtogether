@@ -49,7 +49,7 @@ function getWeb3() {
 }
 
 // Get contract instance
-function getContract() {
+export function getContract() {
   const web3Instance = getWeb3();
   return new web3Instance.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
 }
@@ -143,7 +143,7 @@ export async function updateCaseStatus(caseId: number, newStatus: string) {
 }
 
 // Helper functions for enum conversion
-function getCaseTypeEnum(type: string): number {
+export function getCaseTypeEnum(type: string): number {
   const types = {
     'child_missing': 0,
     'child_labour': 1,
@@ -152,12 +152,12 @@ function getCaseTypeEnum(type: string): number {
   return types[type as keyof typeof types] || 0;
 }
 
-function getCaseTypeString(type: number): string {
+export function getCaseTypeString(type: number): string {
   const types = ['child_missing', 'child_labour', 'child_harassment'];
   return types[type] || 'child_missing';
 }
 
-function getCaseStatusEnum(status: string): number {
+export function getCaseStatusEnum(status: string): number {
   const statuses = {
     'open': 0,
     'investigating': 1,
@@ -166,7 +166,7 @@ function getCaseStatusEnum(status: string): number {
   return statuses[status as keyof typeof statuses] || 0;
 }
 
-function getCaseStatusString(status: number): string {
+export function getCaseStatusString(status: number): string {
   const statuses = ['open', 'investigating', 'resolved'];
   return statuses[status] || 'open';
 }
