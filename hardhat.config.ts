@@ -22,7 +22,8 @@ const config: HardhatUserConfig = {
           }
         }
       },
-      viaIR: true
+      viaIR: true,
+      evmVersion: "paris"
     }
   },
   paths: {

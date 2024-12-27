@@ -1,3 +1,6 @@
+require("@nomicfoundation/hardhat-toolbox");
+require("@nomicfoundation/hardhat-ethers");
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -14,7 +17,8 @@ module.exports = {
           }
         }
       },
-      viaIR: true
+      viaIR: true,
+      evmVersion: "paris"
     }
   },
   networks: {
