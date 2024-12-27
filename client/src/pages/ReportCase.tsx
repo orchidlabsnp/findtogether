@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useRef, useState, useEffect } from 'react';
-import { submitCase } from "@/lib/web3";
+import { submitCaseToBlockchain } from "@/lib/web3";
 import {
   Select,
   SelectContent,
@@ -29,16 +29,6 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 const reportCaseSchema = z.object({
   childName: z.string().min(1, "Child's name is required"),
@@ -64,6 +54,7 @@ export default function ReportCase() {
   const [, setLocation] = useLocation();
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
   const [blockchainSubmitting, setBlockchainSubmitting] = useState(false);
+  const [submittedCase, setSubmittedCase] = useState<any>(null);
 
   const form = useForm<ReportCaseForm>({
     resolver: zodResolver(reportCaseSchema),
@@ -82,7 +73,7 @@ export default function ReportCase() {
     },
   });
 
-  const { mutate: submitCaseData, isPending } = useMutation({
+  const { mutate: submitToDatabase, isPending } = useMutation({
     mutationFn: async (data: ReportCaseForm) => {
       if (!currentAddress) {
         throw new Error("Please connect your wallet first");
@@ -117,33 +108,15 @@ export default function ReportCase() {
         throw new Error(await response.text());
       }
 
-      const dbResult = await response.json();
-
-      setBlockchainSubmitting(true);
-      try {
-        const blockchainCaseId = await submitCase(data, files?.[0]);
-        console.log('Case submitted to blockchain with ID:', blockchainCaseId);
-        return { ...dbResult, blockchainCaseId };
-      } catch (error: any) {
-        console.error('Blockchain submission error:', error);
-        toast({
-          title: "Blockchain Submission Warning",
-          description: "Case saved to database but blockchain submission failed. Please contact support.",
-          variant: "destructive"
-        });
-        return dbResult;
-      } finally {
-        setBlockchainSubmitting(false);
-      }
+      return response.json();
     },
     onSuccess: (result) => {
       toast({
-        title: "Case Reported",
-        description: result.blockchainCaseId 
-          ? "Case has been successfully reported and recorded on blockchain."
-          : "Case has been reported successfully.",
+        title: "Case Saved to Database",
+        description: "Now submitting to blockchain for permanent record...",
       });
-      setLocation("/find");
+      setSubmittedCase(result.case);
+      submitToBlockchain(result.case);
     },
     onError: (error) => {
       if (error.message.startsWith("DUPLICATE_CASE:")) {
@@ -158,6 +131,54 @@ export default function ReportCase() {
       }
     },
   });
+
+  const submitToBlockchain = async (caseData: any) => {
+    try {
+      setBlockchainSubmitting(true);
+      const blockchainCaseId = await submitCaseToBlockchain({
+        childName: caseData.childName,
+        age: caseData.age,
+        location: caseData.location,
+        description: caseData.description,
+        contactInfo: caseData.contactInfo,
+        caseType: caseData.caseType,
+        imageUrl: caseData.imageUrl || '',
+        physicalTraits: JSON.stringify({
+          hair: caseData.hair,
+          eyes: caseData.eyes,
+          height: caseData.height,
+          weight: caseData.weight
+        })
+      });
+
+      toast({
+        title: "Success",
+        description: "Case has been permanently recorded on the blockchain.",
+      });
+
+      // Update the database with blockchain case ID
+      await fetch(`/api/cases/${caseData.id}/blockchain`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ blockchainCaseId }),
+      });
+
+      setLocation("/find");
+    } catch (error: any) {
+      console.error('Blockchain submission error:', error);
+      toast({
+        title: "Warning",
+        description: "Case saved to database but blockchain submission failed. You can retry the blockchain submission later.",
+        variant: "destructive"
+      });
+      // Still redirect to find page since the case is saved in database
+      setLocation("/find");
+    } finally {
+      setBlockchainSubmitting(false);
+    }
+  };
 
   const [duplicateCase, setDuplicateCase] = useState<{
     existingCase: any;
@@ -204,7 +225,7 @@ export default function ReportCase() {
   }
 
   function onSubmit(data: ReportCaseForm) {
-    submitCaseData(data);
+    submitToDatabase(data);
   }
 
   if (!currentAddress) {
@@ -239,11 +260,17 @@ export default function ReportCase() {
             >
               <div className="flex flex-col items-center gap-4 p-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium text-center">
                   {blockchainSubmitting 
-                    ? "Recording case on blockchain..."
-                    : "Processing your report..."}
+                    ? "Recording case on blockchain for permanent reference..."
+                    : "Saving case to database..."}
                 </p>
+                {blockchainSubmitting && (
+                  <p className="text-xs text-muted-foreground text-center max-w-xs">
+                    This step ensures your case is permanently recorded and cannot be altered.
+                    It may take a few moments.
+                  </p>
+                )}
               </div>
             </motion.div>
           )}

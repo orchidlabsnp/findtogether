@@ -424,6 +424,51 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add PUT endpoint for updating blockchain case ID
+  app.put("/api/cases/:id/blockchain", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { blockchainCaseId } = req.body;
+
+      if (typeof blockchainCaseId !== 'number') {
+        return res.status(400).json({
+          error: "Invalid input",
+          details: "blockchainCaseId must be a number"
+        });
+      }
+
+      console.log(`Updating case ${id} with blockchain ID ${blockchainCaseId}`);
+
+      const [updatedCase] = await db.update(cases)
+        .set({ 
+          blockchainCaseId,
+          updatedAt: new Date()
+        })
+        .where(eq(cases.id, parseInt(id)))
+        .returning();
+
+      if (!updatedCase) {
+        return res.status(404).json({
+          error: "Case not found",
+          details: "No case exists with the provided ID"
+        });
+      }
+
+      console.log('Successfully updated case with blockchain ID:', {
+        caseId: id,
+        blockchainCaseId
+      });
+
+      res.json(updatedCase);
+    } catch (error) {
+      console.error("Error updating blockchain case ID:", error);
+      res.status(500).json({
+        error: "Failed to update blockchain case ID",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
