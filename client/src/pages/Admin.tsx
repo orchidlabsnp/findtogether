@@ -226,6 +226,8 @@ export default function Admin() {
     setUpdatingCaseId(caseId);
 
     try {
+      console.log('Initiating status update for case:', caseId, 'to status:', newStatus);
+
       // Update blockchain status
       await updateCaseStatus(caseId, newStatus);
 
