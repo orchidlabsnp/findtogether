@@ -22,6 +22,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, MapPin, Tag, Clock, Calendar, PlayCircle, PauseCircle } from "lucide-react";
 import { format } from "date-fns";
 import { getContract, getAddress, getCaseStatusEnum } from "@/lib/web3";
+import { updateCaseStatus, batchUpdateStatus } from "@/lib/blockchain"; // Assuming these functions are defined elsewhere
+
 
 const ADMIN_ADDRESS = "0x5A498a4520b56Fe0119Bd3D8D032D53c65c035a7";
 const ADMIN_ROLE = "0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775";
@@ -137,15 +139,19 @@ export default function Admin() {
     }
 
     try {
-      const contract = getContract();
-      const address = await getAddress();
+      // Update blockchain status
+      await batchUpdateStatus(selectedCases, newStatus);
 
-      if (!address) throw new Error("No connected account");
-
-      await contract.methods.batchUpdateStatus(
-        selectedCases,
-        getCaseStatusEnum(newStatus)
-      ).send({ from: address });
+      // If blockchain update succeeds, update database for each case
+      await Promise.all(selectedCases.map(caseId =>
+        fetch(`/api/cases/${caseId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: newStatus }),
+        })
+      ));
 
       toast({
         title: "Status Updated",
@@ -158,7 +164,7 @@ export default function Admin() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to update cases status",
         variant: "destructive"
       });
     }
@@ -220,23 +226,8 @@ export default function Admin() {
     setUpdatingCaseId(caseId);
 
     try {
-      // First update the blockchain
-      const contract = getContract();
-      const address = await getAddress();
-
-      if (!address) throw new Error("No connected account");
-
-      // Convert status to enum value (0, 1, 2)
-      const statusEnum = getCaseStatusEnum(newStatus);
-      console.log('Updating case status on blockchain:', { caseId, statusEnum, address });
-
-      // Send transaction to blockchain
-      const tx = await contract.methods.updateCaseStatus(
-        caseId,
-        statusEnum
-      ).send({ from: address });
-
-      console.log('Blockchain transaction complete:', tx);
+      // Update blockchain status
+      await updateCaseStatus(caseId, newStatus);
 
       // If blockchain update succeeds, update database
       const response = await fetch(`/api/cases/${caseId}/status`, {
