@@ -86,6 +86,7 @@ export function getCaseStatusString(status: number): string {
 export async function updateCaseStatus(caseId: number, newStatus: string): Promise<void> {
   try {
     const contract = getContract();
+    const web3Instance = getWeb3();
     const address = await getAddress();
 
     if (!address) throw new Error("No connected account");
@@ -99,17 +100,17 @@ export async function updateCaseStatus(caseId: number, newStatus: string): Promi
       throw new Error("Contract is currently paused");
     }
 
-    // Check if caller has admin role
-    const ADMIN_ROLE = await contract.methods.ADMIN_ROLE().call();
+    // Calculate ADMIN_ROLE using keccak256
+    const ADMIN_ROLE = web3Instance.utils.keccak256("ADMIN_ROLE");
     const hasRole = await contract.methods.hasRole(ADMIN_ROLE, address).call();
     if (!hasRole) {
       throw new Error("Caller does not have admin role");
     }
 
-    // Send the transaction
+    // Send the transaction with gas as string
     const tx = await contract.methods.updateCaseStatus(caseId, statusEnum).send({
       from: address,
-      gas: 200000 // Explicitly set gas limit
+      gas: "200000" // Gas limit as string
     });
 
     console.log('Status update transaction complete:', tx);
@@ -122,6 +123,7 @@ export async function updateCaseStatus(caseId: number, newStatus: string): Promi
 export async function batchUpdateStatus(caseIds: number[], newStatus: string): Promise<void> {
   try {
     const contract = getContract();
+    const web3Instance = getWeb3();
     const address = await getAddress();
 
     if (!address) throw new Error("No connected account");
@@ -135,17 +137,17 @@ export async function batchUpdateStatus(caseIds: number[], newStatus: string): P
       throw new Error("Contract is currently paused");
     }
 
-    // Check if caller has admin role
-    const ADMIN_ROLE = await contract.methods.ADMIN_ROLE().call();
+    // Calculate ADMIN_ROLE using keccak256
+    const ADMIN_ROLE = web3Instance.utils.keccak256("ADMIN_ROLE");
     const hasRole = await contract.methods.hasRole(ADMIN_ROLE, address).call();
     if (!hasRole) {
       throw new Error("Caller does not have admin role");
     }
 
-    // Send the transaction
+    // Send the transaction with gas as string
     const tx = await contract.methods.batchUpdateStatus(caseIds, statusEnum).send({
       from: address,
-      gas: 500000 // Higher gas limit for batch operation
+      gas: "500000" // Gas limit as string
     });
 
     console.log('Batch status update transaction complete:', tx);
@@ -186,10 +188,10 @@ export async function getCaseDetails(caseId: number) {
   }
 }
 
-
 export async function submitCase(caseData: any, imageFile?: File): Promise<number> {
   try {
     const contract = getContract();
+    const web3Instance = getWeb3();
     const account = await getAddress();
 
     if (!account) throw new Error("No connected account");
@@ -202,9 +204,9 @@ export async function submitCase(caseData: any, imageFile?: File): Promise<numbe
 
     // Prepare case data for blockchain
     const caseInput = {
-      childName: caseData.childName,
+      childName: web3Instance.utils.utf8ToHex(caseData.childName),
       age: caseData.age,
-      location: caseData.location,
+      location: web3Instance.utils.utf8ToHex(caseData.location),
       description: caseData.description,
       contactInfo: caseData.contactInfo,
       caseType: getCaseTypeEnum(caseData.caseType),
