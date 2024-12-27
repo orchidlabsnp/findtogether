@@ -112,7 +112,7 @@ export default function CaseDetail() {
                       <User className="h-5 w-5 text-primary" />
                       Child Information
                     </h2>
-                    <div className="space-y-4 bg-gray-50 rounded-lg p-2">
+                    <div className="space-y-4 bg-gray-50 rounded-lg p-4">
                       <div className="flex items-start gap-3">
                         <User className="h-5 w-5 mt-0.5 text-muted-foreground" />
                         <div>
@@ -196,11 +196,11 @@ export default function CaseDetail() {
                   </div>
 
                   <div>
-                    <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                       <Search className="h-5 w-5 text-primary" />
                       Case Description
                     </h2>
-                    <div className="bg-gray-50 rounded-lg p-2">
+                    <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed break-words">
                         {case_.description}
                       </p>
@@ -214,7 +214,7 @@ export default function CaseDetail() {
                       <Phone className="h-5 w-5 text-primary" />
                       Contact Information
                     </h2>
-                    <div className="space-y-4 bg-gray-50 rounded-lg p-2">
+                    <div className="space-y-4 bg-gray-50 rounded-lg p-4">
                       <div className="flex items-start gap-3">
                         <Phone className="h-5 w-5 mt-0.5 text-muted-foreground" />
                         <div>
