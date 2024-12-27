@@ -219,14 +219,91 @@ export async function submitCase(caseData: any, imageFile?: File): Promise<numbe
       })
     };
 
-    // Submit to blockchain
-    const result = await contract.methods.submitCase(caseInput).send({ from: account });
-    if (!result.events?.CaseSubmitted?.returnValues?.caseId) {
-      throw new Error("Failed to get case ID from event");
-    }
-    return Number(result.events.CaseSubmitted.returnValues.caseId);
+    // Submit to database (this part remains)
+    //  Database submission logic needs to be implemented here.  Example:
+    //  const databaseCaseId = await databaseSubmission(caseInput);
+
+    // Submit to blockchain after successful database submission
+    const blockchainCaseId = await submitCaseToBlockchain(caseInput);
+    return blockchainCaseId;
+
   } catch (error) {
     console.error("Error submitting case:", error);
     throw error;
+  }
+}
+
+interface CaseInput {
+  childName: string;
+  age: number;
+  location: string;
+  description: string;
+  contactInfo: string;
+  caseType: string;
+  imageUrl: string;
+  physicalTraits: string;
+}
+
+export async function submitCaseToBlockchain(caseInput: CaseInput): Promise<number> {
+  try {
+    console.log('Starting blockchain case submission...', { ...caseInput, childName: '***', contactInfo: '***' });
+    const contract = getContract();
+    const web3Instance = getWeb3();
+    const account = await getAddress();
+
+    if (!account) throw new Error("No connected account");
+
+    // First check if the contract is paused
+    const isPaused = await contract.methods.paused().call();
+    console.log('Contract pause status:', isPaused);
+    if (isPaused) {
+      throw new Error("Contract is currently paused");
+    }
+
+    // Prepare case data for blockchain
+    const blockchainInput = {
+      childName: web3Instance.utils.utf8ToHex(caseInput.childName),
+      age: caseInput.age,
+      location: web3Instance.utils.utf8ToHex(caseInput.location),
+      description: caseInput.description,
+      contactInfo: caseInput.contactInfo,
+      caseType: getCaseTypeEnum(caseInput.caseType),
+      imageUrl: caseInput.imageUrl,
+      physicalTraits: JSON.stringify({
+        description: caseInput.physicalTraits
+      })
+    };
+
+    console.log('Submitting case to blockchain...', { 
+      age: blockchainInput.age,
+      caseType: blockchainInput.caseType,
+      imageUrl: '***'
+    });
+
+    // Estimate gas for the transaction
+    const gasEstimate = await contract.methods.submitCase(blockchainInput)
+      .estimateGas({ from: account });
+    console.log('Estimated gas for case submission:', gasEstimate);
+
+    // Submit to blockchain with 20% gas buffer
+    const result = await contract.methods.submitCase(blockchainInput)
+      .send({ 
+        from: account,
+        gas: Math.floor(gasEstimate * 1.2).toString()
+      });
+
+    console.log('Case submission transaction complete:', {
+      transactionHash: result.transactionHash,
+      caseId: result.events?.CaseSubmitted?.returnValues?.caseId
+    });
+
+    if (!result.events?.CaseSubmitted?.returnValues?.caseId) {
+      throw new Error("Failed to get case ID from blockchain event");
+    }
+
+    return Number(result.events.CaseSubmitted.returnValues.caseId);
+  } catch (error: any) {
+    console.error('Error submitting case to blockchain:', error);
+    throw new Error(`Blockchain submission failed: ${error.message}`);
   }
 }

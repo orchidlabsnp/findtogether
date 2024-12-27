@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useRef, useState, useEffect } from 'react';
+import { submitCase } from "@/lib/web3";
 import {
   Select,
   SelectContent,
@@ -62,6 +63,7 @@ export default function ReportCase() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
+  const [blockchainSubmitting, setBlockchainSubmitting] = useState(false);
 
   const form = useForm<ReportCaseForm>({
     resolver: zodResolver(reportCaseSchema),
@@ -80,7 +82,7 @@ export default function ReportCase() {
     },
   });
 
-  const { mutate: submitCase, isPending } = useMutation({
+  const { mutate: submitCaseData, isPending } = useMutation({
     mutationFn: async (data: ReportCaseForm) => {
       if (!currentAddress) {
         throw new Error("Please connect your wallet first");
@@ -115,12 +117,31 @@ export default function ReportCase() {
         throw new Error(await response.text());
       }
 
-      return response.json();
+      const dbResult = await response.json();
+
+      setBlockchainSubmitting(true);
+      try {
+        const blockchainCaseId = await submitCase(data, files?.[0]);
+        console.log('Case submitted to blockchain with ID:', blockchainCaseId);
+        return { ...dbResult, blockchainCaseId };
+      } catch (error: any) {
+        console.error('Blockchain submission error:', error);
+        toast({
+          title: "Blockchain Submission Warning",
+          description: "Case saved to database but blockchain submission failed. Please contact support.",
+          variant: "destructive"
+        });
+        return dbResult;
+      } finally {
+        setBlockchainSubmitting(false);
+      }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast({
         title: "Case Reported",
-        description: "The case has been successfully reported.",
+        description: result.blockchainCaseId 
+          ? "Case has been successfully reported and recorded on blockchain."
+          : "Case has been reported successfully.",
       });
       setLocation("/find");
     },
@@ -183,7 +204,7 @@ export default function ReportCase() {
   }
 
   function onSubmit(data: ReportCaseForm) {
-    submitCase(data);
+    submitCaseData(data);
   }
 
   if (!currentAddress) {
@@ -210,7 +231,7 @@ export default function ReportCase() {
         className="max-w-2xl mx-auto"
       >
         <Card className="relative shadow-lg">
-          {isPending && (
+          {(isPending || blockchainSubmitting) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -218,7 +239,11 @@ export default function ReportCase() {
             >
               <div className="flex flex-col items-center gap-4 p-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm font-medium">Processing your report...</p>
+                <p className="text-sm font-medium">
+                  {blockchainSubmitting 
+                    ? "Recording case on blockchain..."
+                    : "Processing your report..."}
+                </p>
               </div>
             </motion.div>
           )}
@@ -441,10 +466,10 @@ export default function ReportCase() {
                 <Button
                   type="submit"
                   className="w-full relative"
-                  disabled={isPending}
+                  disabled={isPending || blockchainSubmitting}
                 >
                   <AnimatePresence mode="wait">
-                    {isPending ? (
+                    {(isPending || blockchainSubmitting) ? (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
