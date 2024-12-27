@@ -14,6 +14,7 @@ contract CaseRegistry is AccessControl, Pausable {
     enum CaseStatus { Open, Investigating, Resolved }
     enum CaseType { ChildMissing, ChildLabour, ChildHarassment }
 
+    // Main case structure
     struct Case {
         uint256 id;
         string childName;
@@ -34,6 +35,23 @@ contract CaseRegistry is AccessControl, Pausable {
         uint256 createdAt;
         uint256 updatedAt;
         bool exists;
+    }
+
+    // Input structure to group parameters
+    struct CaseInput {
+        string childName;
+        uint8 age;
+        string dateOfBirth;
+        string hair;
+        string eyes;
+        uint16 height;
+        uint16 weight;
+        string location;
+        string description;
+        string contactInfo;
+        CaseType caseType;
+        string imageUrl;
+        string aiCharacteristics;
     }
 
     mapping(uint256 => Case) public cases;
@@ -69,54 +87,48 @@ contract CaseRegistry is AccessControl, Pausable {
         _;
     }
 
-    function submitCase(
-        string memory childName,
-        uint8 age,
-        string memory dateOfBirth,
-        string memory hair,
-        string memory eyes,
-        uint16 height,
-        uint16 weight,
-        string memory location,
-        string memory description,
-        string memory contactInfo,
-        CaseType caseType,
-        string memory imageUrl,
-        string memory aiCharacteristics
-    ) public whenNotPaused returns (uint256) {
-        require(bytes(childName).length > 0, "Child name cannot be empty");
-        require(age > 0 && age < 18, "Invalid age");
-        require(bytes(location).length > 0, "Location cannot be empty");
-        require(bytes(description).length > 0, "Description cannot be empty");
-        require(bytes(contactInfo).length > 0, "Contact info cannot be empty");
+    function validateCaseInput(CaseInput memory input) internal pure {
+        require(bytes(input.childName).length > 0, "Child name cannot be empty");
+        require(input.age > 0 && input.age < 18, "Invalid age");
+        require(bytes(input.location).length > 0, "Location cannot be empty");
+        require(bytes(input.description).length > 0, "Description cannot be empty");
+        require(bytes(input.contactInfo).length > 0, "Contact info cannot be empty");
+    }
 
+    function createCase(CaseInput memory input) internal returns (uint256) {
         _caseIdCounter.increment();
         uint256 newCaseId = _caseIdCounter.current();
 
         Case storage newCase = cases[newCaseId];
         newCase.id = newCaseId;
-        newCase.childName = childName;
-        newCase.age = age;
-        newCase.dateOfBirth = dateOfBirth;
-        newCase.hair = hair;
-        newCase.eyes = eyes;
-        newCase.height = height;
-        newCase.weight = weight;
-        newCase.location = location;
-        newCase.description = description;
-        newCase.contactInfo = contactInfo;
-        newCase.caseType = caseType;
+        newCase.childName = input.childName;
+        newCase.age = input.age;
+        newCase.dateOfBirth = input.dateOfBirth;
+        newCase.hair = input.hair;
+        newCase.eyes = input.eyes;
+        newCase.height = input.height;
+        newCase.weight = input.weight;
+        newCase.location = input.location;
+        newCase.description = input.description;
+        newCase.contactInfo = input.contactInfo;
+        newCase.caseType = input.caseType;
         newCase.reporter = msg.sender;
         newCase.status = CaseStatus.Open;
-        newCase.imageUrl = imageUrl;
-        newCase.aiCharacteristics = aiCharacteristics;
+        newCase.imageUrl = input.imageUrl;
+        newCase.aiCharacteristics = input.aiCharacteristics;
         newCase.createdAt = block.timestamp;
         newCase.updatedAt = block.timestamp;
         newCase.exists = true;
 
+        return newCaseId;
+    }
+
+    function submitCase(CaseInput memory input) public whenNotPaused returns (uint256) {
+        validateCaseInput(input);
+        uint256 newCaseId = createCase(input);
         userCases[msg.sender].push(newCaseId);
 
-        emit CaseSubmitted(newCaseId, childName, msg.sender, block.timestamp);
+        emit CaseSubmitted(newCaseId, input.childName, msg.sender, block.timestamp);
         return newCaseId;
     }
 
