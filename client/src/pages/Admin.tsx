@@ -128,6 +128,62 @@ export default function Admin() {
     }
   };
 
+  const handleStatusUpdate = async (caseId: number, newStatus: string) => {
+    setIsUpdating(true);
+    setUpdatingCaseId(caseId);
+
+    try {
+      console.log('Initiating status update for case:', caseId, 'to status:', newStatus);
+
+      // Find the case we're updating
+      const caseToUpdate = cases?.find(c => c.id === caseId);
+      if (!caseToUpdate) {
+        throw new Error("Case not found");
+      }
+
+      // If case is on blockchain, update both blockchain and database
+      if (caseToUpdate.blockchainCaseId) {
+        console.log('Case is on blockchain, updating both systems...');
+        // Update blockchain status
+        await updateCaseStatus(caseToUpdate.blockchainCaseId, newStatus);
+      } else {
+        console.log('Case is not on blockchain, updating only database...');
+      }
+
+      // Update database
+      const response = await fetch(`/api/cases/${caseId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
+
+      toast({
+        title: "Status Updated",
+        description: caseToUpdate.blockchainCaseId 
+          ? "Case status has been updated in both database and blockchain"
+          : "Case status has been updated in database",
+      });
+    } catch (error: any) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update case status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+      setUpdatingCaseId(null);
+    }
+  };
+
   const handleBatchStatusUpdate = async (newStatus: string) => {
     if (selectedCases.length === 0) {
       toast({
@@ -139,10 +195,20 @@ export default function Admin() {
     }
 
     try {
-      // Update blockchain status
-      await batchUpdateStatus(selectedCases, newStatus);
+      // Get selected cases details
+      const selectedCasesDetails = cases?.filter(c => selectedCases.includes(c.id)) || [];
+      const blockchainCases = selectedCasesDetails.filter(c => c.blockchainCaseId);
 
-      // If blockchain update succeeds, update database for each case
+      // If any cases are on blockchain, update them first
+      if (blockchainCases.length > 0) {
+        console.log('Updating blockchain cases:', blockchainCases.map(c => c.blockchainCaseId));
+        await batchUpdateStatus(
+          blockchainCases.map(c => c.blockchainCaseId!),
+          newStatus
+        );
+      }
+
+      // Update database for all cases
       await Promise.all(selectedCases.map(caseId =>
         fetch(`/api/cases/${caseId}/status`, {
           method: 'PUT',
@@ -155,7 +221,9 @@ export default function Admin() {
 
       toast({
         title: "Status Updated",
-        description: `Updated ${selectedCases.length} cases to ${newStatus}`,
+        description: blockchainCases.length > 0 
+          ? `Updated ${selectedCases.length} cases in database and ${blockchainCases.length} in blockchain`
+          : `Updated ${selectedCases.length} cases in database`,
       });
 
       // Refresh the cases list
@@ -165,35 +233,6 @@ export default function Admin() {
       toast({
         title: "Error",
         description: error.message || "Failed to update cases status",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleRoleManagement = async (address: string, action: 'grant' | 'revoke') => {
-    try {
-      const contract = getContract();
-      const currentAddress = await getAddress();
-
-      if (!currentAddress) throw new Error("No connected account");
-
-      if (action === 'grant') {
-        await contract.methods.grantRole(ADMIN_ROLE, address).send({ from: currentAddress });
-        toast({
-          title: "Role Granted",
-          description: `Admin role granted to ${address}`,
-        });
-      } else {
-        await contract.methods.revokeRole(ADMIN_ROLE, address).send({ from: currentAddress });
-        toast({
-          title: "Role Revoked",
-          description: `Admin role revoked from ${address}`,
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
         variant: "destructive"
       });
     }
@@ -221,47 +260,111 @@ export default function Admin() {
     return labels[type] || type;
   };
 
-  const handleStatusUpdate = async (caseId: number, newStatus: string) => {
-    setIsUpdating(true);
-    setUpdatingCaseId(caseId);
+  const renderCaseCard = (case_: any) => (
+    <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex flex-col space-y-3">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id={`case-${case_.id}`} 
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedCases([...selectedCases, case_.id]);
+                  } else {
+                    setSelectedCases(selectedCases.filter(id => id !== case_.id));
+                  }
+                }}
+              />
+              <span className="font-mono text-sm text-gray-500">#{case_.id}</span>
+              <h3 className="text-base font-semibold text-gray-900">
+                {case_.childName}
+                {case_.blockchainCaseId && (
+                  <Badge 
+                    variant="secondary" 
+                    className="ml-2 text-xs"
+                    title="This case is stored on blockchain"
+                  >
+                    Blockchain
+                  </Badge>
+                )}
+              </h3>
+            </div>
+            <Select
+              value={case_.status || undefined}
+              onValueChange={(value) => handleStatusUpdate(case_.id, value)}
+              disabled={isUpdating && updatingCaseId === case_.id}
+            >
+              <SelectTrigger className={`w-32 h-8 text-sm ${getStatusColor(case_.status)}`}>
+                {isUpdating && updatingCaseId === case_.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <SelectValue placeholder="Status" />
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="investigating">Investigating</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-    try {
-      console.log('Initiating status update for case:', caseId, 'to status:', newStatus);
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-1.5">
+              <Tag className="h-4 w-4 text-gray-600" />
+              <span className="text-sm">{getCaseTypeLabel(case_.caseType)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-gray-600" />
+              <span className="text-sm">Age: {case_.age}</span>
+            </div>
+          </div>
 
-      // Update blockchain status
-      await updateCaseStatus(caseId, newStatus);
+          <div className="flex items-start gap-1.5">
+            <MapPin className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
+            <span className="text-sm text-gray-600">{case_.location}</span>
+          </div>
 
-      // If blockchain update succeeds, update database
-      const response = await fetch(`/api/cases/${caseId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+              {case_.description}
+            </p>
+          </div>
 
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
+          <div className="text-sm text-gray-600 bg-blue-50 rounded-lg p-3">
+            <strong>Contact:</strong> {case_.contactInfo}
+          </div>
 
-      await queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
+          {case_.createdAt && (
+            <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                <span>Created: {format(new Date(case_.createdAt), 'PPp')}</span>
+              </div>
+              {case_.updatedAt && (
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  <span>Updated: {format(new Date(case_.updatedAt), 'PPp')}</span>
+                </div>
+              )}
+            </div>
+          )}
 
-      toast({
-        title: "Status Updated",
-        description: "Case status has been successfully updated",
-      });
-    } catch (error: any) {
-      console.error('Error updating status:', error);
-      toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update case status",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-      setUpdatingCaseId(null);
-    }
-  };
+          {case_.imageUrl && (
+            <div className="mt-2">
+              <img
+                src={case_.imageUrl}
+                alt={`Case ${case_.id} - ${case_.childName}`}
+                className="rounded-lg w-full h-48 object-cover shadow-sm"
+              />
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (!currentAddress || (!hasAdminRole && currentAddress.toLowerCase() !== ADMIN_ADDRESS.toLowerCase())) {
     return null;
@@ -333,94 +436,7 @@ export default function Admin() {
                           transition={{ delay: index * 0.1 }}
                           className="mx-auto w-full max-w-3xl"
                         >
-                          <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
-                            <CardContent className="p-4 sm:p-6">
-                              <div className="flex flex-col space-y-3">
-                                <div className="flex justify-between items-start">
-                                  <div className="flex items-center gap-2">
-                                    <input type="checkbox" id={`case-${case_.id}`} onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setSelectedCases([...selectedCases, case_.id]);
-                                      } else {
-                                        setSelectedCases(selectedCases.filter(id => id !== case_.id));
-                                      }
-                                    }} />
-                                    <span className="font-mono text-sm text-gray-500">#{case_.id}</span>
-                                    <h3 className="text-base font-semibold text-gray-900">{case_.childName}</h3>
-                                  </div>
-                                  <Select
-                                    value={case_.status || undefined}
-                                    onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                                    disabled={isUpdating && updatingCaseId === case_.id}
-                                  >
-                                    <SelectTrigger className={`w-32 h-8 text-sm ${getStatusColor(case_.status)}`}>
-                                      {isUpdating && updatingCaseId === case_.id ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <SelectValue placeholder="Status" />
-                                      )}
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="open">Open</SelectItem>
-                                      <SelectItem value="investigating">Investigating</SelectItem>
-                                      <SelectItem value="resolved">Resolved</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                <div className="flex flex-wrap gap-3">
-                                  <div className="flex items-center gap-1.5">
-                                    <Tag className="h-4 w-4 text-gray-600" />
-                                    <span className="text-sm">{getCaseTypeLabel(case_.caseType)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <Clock className="h-4 w-4 text-gray-600" />
-                                    <span className="text-sm">Age: {case_.age}</span>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-start gap-1.5">
-                                  <MapPin className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
-                                  <span className="text-sm text-gray-600">{case_.location}</span>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-3">
-                                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
-                                    {case_.description}
-                                  </p>
-                                </div>
-
-                                <div className="text-sm text-gray-600 bg-blue-50 rounded-lg p-3">
-                                  <strong>Contact:</strong> {case_.contactInfo}
-                                </div>
-
-                                {case_.createdAt && (
-                                  <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                                    <div className="flex items-center gap-1.5">
-                                      <Calendar className="h-4 w-4" />
-                                      <span>Created: {format(new Date(case_.createdAt), 'PPp')}</span>
-                                    </div>
-                                    {case_.updatedAt && (
-                                      <div className="flex items-center gap-1.5">
-                                        <Clock className="h-4 w-4" />
-                                        <span>Updated: {format(new Date(case_.updatedAt), 'PPp')}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {case_.imageUrl && (
-                                  <div className="mt-2">
-                                    <img
-                                      src={case_.imageUrl}
-                                      alt={`Case ${case_.id} - ${case_.childName}`}
-                                      className="rounded-lg w-full h-48 object-cover shadow-sm"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
+                          {renderCaseCard(case_)}
                         </motion.div>
                       ))}
                     </div>
@@ -444,94 +460,7 @@ export default function Admin() {
                           transition={{ delay: index * 0.1 }}
                           className="mx-auto w-full max-w-3xl"
                         >
-                          <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
-                            <CardContent className="p-4 sm:p-6">
-                              <div className="flex flex-col space-y-3">
-                                <div className="flex justify-between items-start">
-                                  <div className="flex items-center gap-2">
-                                    <input type="checkbox" id={`case-${case_.id}`} onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setSelectedCases([...selectedCases, case_.id]);
-                                      } else {
-                                        setSelectedCases(selectedCases.filter(id => id !== case_.id));
-                                      }
-                                    }} />
-                                    <span className="font-mono text-sm text-gray-500">#{case_.id}</span>
-                                    <h3 className="text-base font-semibold text-gray-900">{case_.childName}</h3>
-                                  </div>
-                                  <Select
-                                    value={case_.status || undefined}
-                                    onValueChange={(value) => handleStatusUpdate(case_.id, value)}
-                                    disabled={isUpdating && updatingCaseId === case_.id}
-                                  >
-                                    <SelectTrigger className={`w-32 h-8 text-sm ${getStatusColor(case_.status)}`}>
-                                      {isUpdating && updatingCaseId === case_.id ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <SelectValue placeholder="Status" />
-                                      )}
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="open">Open</SelectItem>
-                                      <SelectItem value="investigating">Investigating</SelectItem>
-                                      <SelectItem value="resolved">Resolved</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                <div className="flex flex-wrap gap-3">
-                                  <div className="flex items-center gap-1.5">
-                                    <Tag className="h-4 w-4 text-gray-600" />
-                                    <span className="text-sm">{getCaseTypeLabel(case_.caseType)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <Clock className="h-4 w-4 text-gray-600" />
-                                    <span className="text-sm">Age: {case_.age}</span>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-start gap-1.5">
-                                  <MapPin className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
-                                  <span className="text-sm text-gray-600">{case_.location}</span>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-3">
-                                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
-                                    {case_.description}
-                                  </p>
-                                </div>
-
-                                <div className="text-sm text-gray-600 bg-blue-50 rounded-lg p-3">
-                                  <strong>Contact:</strong> {case_.contactInfo}
-                                </div>
-
-                                {case_.createdAt && (
-                                  <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                                    <div className="flex items-center gap-1.5">
-                                      <Calendar className="h-4 w-4" />
-                                      <span>Created: {format(new Date(case_.createdAt), 'PPp')}</span>
-                                    </div>
-                                    {case_.updatedAt && (
-                                      <div className="flex items-center gap-1.5">
-                                        <Clock className="h-4 w-4" />
-                                        <span>Updated: {format(new Date(case_.updatedAt), 'PPp')}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {case_.imageUrl && (
-                                  <div className="mt-2">
-                                    <img
-                                      src={case_.imageUrl}
-                                      alt={`Case ${case_.id} - ${case_.childName}`}
-                                      className="rounded-lg w-full h-48 object-cover shadow-sm"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
+                          {renderCaseCard(case_)}
                         </motion.div>
                       ))}
                     </div>
