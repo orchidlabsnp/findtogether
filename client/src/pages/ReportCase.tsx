@@ -21,6 +21,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -55,6 +65,7 @@ export default function ReportCase() {
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
   const [blockchainSubmitting, setBlockchainSubmitting] = useState(false);
   const [submittedCase, setSubmittedCase] = useState<any>(null);
+  const [showBlockchainConfirm, setShowBlockchainConfirm] = useState(false);
 
   const form = useForm<ReportCaseForm>({
     resolver: zodResolver(reportCaseSchema),
@@ -99,11 +110,6 @@ export default function ReportCase() {
         body: formData,
       });
 
-      if (response.status === 409) {
-        const duplicateData = await response.json();
-        throw new Error("DUPLICATE_CASE:" + JSON.stringify(duplicateData));
-      }
-
       if (!response.ok) {
         throw new Error(await response.text());
       }
@@ -112,23 +118,18 @@ export default function ReportCase() {
     },
     onSuccess: (result) => {
       toast({
-        title: "Case Saved to Database",
-        description: "Now submitting to blockchain for permanent record...",
+        title: "Case Saved Successfully",
+        description: "Your case has been saved to our database.",
       });
       setSubmittedCase(result.case);
-      submitToBlockchain(result.case);
+      setShowBlockchainConfirm(true);
     },
     onError: (error) => {
-      if (error.message.startsWith("DUPLICATE_CASE:")) {
-        const duplicateData = JSON.parse(error.message.replace("DUPLICATE_CASE:", ""));
-        setDuplicateCase(duplicateData);
-      } else {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
     },
   });
 
@@ -156,7 +157,6 @@ export default function ReportCase() {
         description: "Case has been permanently recorded on the blockchain.",
       });
 
-      // Update the database with blockchain case ID
       await fetch(`/api/cases/${caseData.id}/blockchain`, {
         method: 'PUT',
         headers: {
@@ -170,13 +170,13 @@ export default function ReportCase() {
       console.error('Blockchain submission error:', error);
       toast({
         title: "Warning",
-        description: "Case saved to database but blockchain submission failed. You can retry the blockchain submission later.",
+        description: "Failed to store case on blockchain. You can try again later from the case details page.",
         variant: "destructive"
       });
-      // Still redirect to find page since the case is saved in database
       setLocation("/find");
     } finally {
       setBlockchainSubmitting(false);
+      setShowBlockchainConfirm(false);
     }
   };
 
@@ -261,7 +261,7 @@ export default function ReportCase() {
               <div className="flex flex-col items-center gap-4 p-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm font-medium text-center">
-                  {blockchainSubmitting 
+                  {blockchainSubmitting
                     ? "Recording case on blockchain for permanent reference..."
                     : "Saving case to database..."}
                 </p>
@@ -575,6 +575,35 @@ export default function ReportCase() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      <AlertDialog open={showBlockchainConfirm} onOpenChange={setShowBlockchainConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Store Case on Blockchain?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Storing your case on the blockchain creates a permanent, tamper-proof record.
+              This adds an extra layer of security and transparency to your case.
+
+              Would you like to proceed with blockchain storage?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowBlockchainConfirm(false);
+              setLocation("/find");
+            }}>
+              Skip for Now
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (submittedCase) {
+                submitToBlockchain(submittedCase);
+              }
+            }}>
+              Yes, Store on Blockchain
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
