@@ -1,25 +1,25 @@
 import { ethers } from 'ethers';
-import CaseRegistryABI from '../../artifacts/contracts/CaseRegistry.sol/CaseRegistry.json';
+import CaseRegistryArtifact from '../../../artifacts/contracts/CaseRegistry.sol/CaseRegistry.json';
 
 export type Web3Provider = ethers.BrowserProvider;
 export type Web3Signer = ethers.JsonRpcSigner;
 
 // Contract address will be set after deployment
-const CONTRACT_ADDRESS = process.env.VITE_CONTRACT_ADDRESS || '';
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '';
 
 export async function getWeb3Provider(): Promise<Web3Provider | null> {
   if (typeof window === 'undefined' || !window.ethereum) {
     console.error('MetaMask not installed');
     return null;
   }
-  
+
   return new ethers.BrowserProvider(window.ethereum);
 }
 
 export async function connectWallet(): Promise<string[]> {
   const provider = await getWeb3Provider();
   if (!provider) throw new Error('No provider available');
-  
+
   try {
     const accounts = await provider.send('eth_requestAccounts', []);
     return accounts;
@@ -34,7 +34,7 @@ export async function getCaseRegistryContract(
 ) {
   return new ethers.Contract(
     CONTRACT_ADDRESS,
-    CaseRegistryABI.abi,
+    CaseRegistryArtifact.abi,
     signerOrProvider
   );
 }
@@ -78,8 +78,8 @@ export async function submitCase(
     );
 
     const receipt = await tx.wait();
-    const event = receipt.events?.find(e => e.event === 'CaseSubmitted');
-    
+    const event = receipt?.logs?.find((e: any) => e.fragment.name === 'CaseSubmitted');
+
     return {
       transactionHash: receipt.hash,
       caseId: event?.args?.caseId.toString()
@@ -101,7 +101,7 @@ export async function updateCaseStatus(
   try {
     const tx = await contract.updateCaseStatus(caseId, newStatus);
     const receipt = await tx.wait();
-    
+
     return {
       transactionHash: receipt.hash,
       status: newStatus
@@ -117,7 +117,7 @@ export async function getCaseDetails(
   caseId: number
 ) {
   const contract = await getCaseRegistryContract(provider);
-  
+
   try {
     const caseDetails = await contract.getCaseById(caseId);
     return caseDetails;
@@ -132,7 +132,7 @@ export async function getUserCases(
   userAddress: string
 ) {
   const contract = await getCaseRegistryContract(provider);
-  
+
   try {
     const caseIds = await contract.getCasesByUser(userAddress);
     return caseIds;

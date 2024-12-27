@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { ethers } from 'ethers';
 import {
   getWeb3Provider,
   connectWallet,
@@ -33,7 +32,7 @@ export function useWeb3() {
 
       const accounts = await connectWallet();
       const signer = await provider.getSigner();
-      
+
       setProvider(provider);
       setSigner(signer);
       setAddress(accounts[0]);
@@ -74,10 +73,12 @@ export function useWeb3() {
       }
     };
 
-    window.ethereum.on('accountsChanged', handleAccountsChanged);
-    return () => {
-      window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-    };
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      return () => {
+        window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
+      };
+    }
   }, [disconnect]);
 
   // Handle chain changes
@@ -88,10 +89,12 @@ export function useWeb3() {
       window.location.reload();
     };
 
-    window.ethereum.on('chainChanged', handleChainChanged);
-    return () => {
-      window.ethereum.removeListener('chainChanged', handleChainChanged);
-    };
+    if (window.ethereum) {
+      window.ethereum.on('chainChanged', handleChainChanged);
+      return () => {
+        window.ethereum?.removeListener('chainChanged', handleChainChanged);
+      };
+    }
   }, []);
 
   return {
