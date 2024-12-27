@@ -47,20 +47,29 @@ function getWeb3() {
   throw new Error("MetaMask is not installed");
 }
 
-// Get contract instance
+// Get contract instance with error handling
 export function getContract() {
-  const web3Instance = getWeb3();
-  return new web3Instance.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+  try {
+    const web3Instance = getWeb3();
+    const contract = new web3Instance.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+    if (!contract) {
+      throw new Error("Failed to initialize contract");
+    }
+    return contract;
+  } catch (error) {
+    console.error("Error getting contract instance:", error);
+    throw new Error("Failed to connect to smart contract. Please check your network connection.");
+  }
 }
 
 // Helper functions for enum conversion
 export function getCaseTypeEnum(type: string): number {
   const types = {
-    'child_missing': 0, // Missing
-    'child_labour': 1, // Labour
-    'child_harassment': 2 // Harassment
+    'child_missing': 0,
+    'child_labour': 1,
+    'child_harassment': 2
   };
-  return types[type as keyof typeof types] || 0;
+  return types[type as keyof typeof types] ?? 0;
 }
 
 export function getCaseTypeString(type: number): string {
@@ -70,11 +79,11 @@ export function getCaseTypeString(type: number): string {
 
 export function getCaseStatusEnum(status: string): number {
   const statuses = {
-    'open': 0, // Status.Open
-    'investigating': 1, // Status.Investigating
-    'resolved': 2 // Status.Resolved
+    'open': 0,
+    'investigating': 1,
+    'resolved': 2
   };
-  return statuses[status as keyof typeof statuses] || 0;
+  return statuses[status as keyof typeof statuses] ?? 0;
 }
 
 export function getCaseStatusString(status: number): string {
@@ -86,7 +95,6 @@ export function getCaseStatusString(status: number): string {
 export async function updateCaseStatus(caseId: number, newStatus: string): Promise<void> {
   try {
     const contract = getContract();
-    const web3Instance = getWeb3();
     const address = await getAddress();
 
     if (!address) throw new Error("No connected account");
@@ -94,23 +102,15 @@ export async function updateCaseStatus(caseId: number, newStatus: string): Promi
     const statusEnum = getCaseStatusEnum(newStatus);
     console.log('Updating case status:', { caseId, statusEnum, address });
 
-    // First check if the contract is paused
-    const isPaused = await contract.methods.paused().call();
-    if (isPaused) {
-      throw new Error("Contract is currently paused");
-    }
+    // Estimate gas with a buffer
+    const gasEstimate = await contract.methods.updateCaseStatus(caseId, statusEnum)
+      .estimateGas({ from: address });
+    const gasLimit = Math.floor(Number(gasEstimate.toString()) * 1.2).toString();
 
-    // Calculate ADMIN_ROLE using keccak256
-    const ADMIN_ROLE = web3Instance.utils.keccak256("ADMIN_ROLE");
-    const hasRole = await contract.methods.hasRole(ADMIN_ROLE, address).call();
-    if (!hasRole) {
-      throw new Error("Caller does not have admin role");
-    }
-
-    // Send the transaction with gas as string
+    // Send the transaction
     const tx = await contract.methods.updateCaseStatus(caseId, statusEnum).send({
       from: address,
-      gas: "200000" // Gas limit as string
+      gas: gasLimit
     });
 
     console.log('Status update transaction complete:', tx);
@@ -123,7 +123,6 @@ export async function updateCaseStatus(caseId: number, newStatus: string): Promi
 export async function batchUpdateStatus(caseIds: number[], newStatus: string): Promise<void> {
   try {
     const contract = getContract();
-    const web3Instance = getWeb3();
     const address = await getAddress();
 
     if (!address) throw new Error("No connected account");
@@ -131,29 +130,109 @@ export async function batchUpdateStatus(caseIds: number[], newStatus: string): P
     const statusEnum = getCaseStatusEnum(newStatus);
     console.log('Batch updating case statuses:', { caseIds, statusEnum, address });
 
-    // First check if the contract is paused
-    const isPaused = await contract.methods.paused().call();
-    if (isPaused) {
-      throw new Error("Contract is currently paused");
-    }
+    // Estimate gas with a buffer
+    const gasEstimate = await contract.methods.batchUpdateStatus(caseIds, statusEnum)
+      .estimateGas({ from: address });
+    const gasLimit = Math.floor(Number(gasEstimate.toString()) * 1.2).toString();
 
-    // Calculate ADMIN_ROLE using keccak256
-    const ADMIN_ROLE = web3Instance.utils.keccak256("ADMIN_ROLE");
-    const hasRole = await contract.methods.hasRole(ADMIN_ROLE, address).call();
-    if (!hasRole) {
-      throw new Error("Caller does not have admin role");
-    }
-
-    // Send the transaction with gas as string
+    // Send the transaction
     const tx = await contract.methods.batchUpdateStatus(caseIds, statusEnum).send({
       from: address,
-      gas: "500000" // Gas limit as string
+      gas: gasLimit
     });
 
     console.log('Batch status update transaction complete:', tx);
   } catch (error: any) {
     console.error('Error in batchUpdateStatus:', error);
     throw error;
+  }
+}
+
+export async function submitCaseToBlockchain(caseInput: {
+  childName: string;
+  age: number;
+  location: string;
+  description: string;
+  contactInfo: string;
+  caseType: string;
+  imageUrl: string;
+  physicalTraits: string;
+}): Promise<number> {
+  try {
+    console.log('Starting blockchain case submission...', { 
+      age: caseInput.age,
+      caseType: caseInput.caseType,
+      location: caseInput.location 
+    });
+
+    const contract = getContract();
+    const web3Instance = getWeb3();
+    const account = await getAddress();
+
+    if (!account) throw new Error("No connected account");
+
+    // First check if the contract is paused
+    const isPaused = await contract.methods.paused().call();
+    console.log('Contract pause status:', isPaused);
+    if (isPaused) {
+      throw new Error("Contract is currently paused");
+    }
+
+    // Prepare case data for blockchain
+    const blockchainInput = {
+      childName: web3Instance.utils.utf8ToHex(caseInput.childName),
+      age: caseInput.age,
+      location: web3Instance.utils.utf8ToHex(caseInput.location),
+      description: caseInput.description,
+      contactInfo: caseInput.contactInfo,
+      caseType: getCaseTypeEnum(caseInput.caseType),
+      imageUrl: caseInput.imageUrl,
+      physicalTraits: caseInput.physicalTraits
+    };
+
+    console.log('Submitting case to blockchain...', { 
+      age: blockchainInput.age,
+      caseType: blockchainInput.caseType,
+      hexLocation: blockchainInput.location
+    });
+
+    // Estimate gas for the transaction
+    let gasEstimate;
+    try {
+      gasEstimate = await contract.methods.submitCase(blockchainInput)
+        .estimateGas({ from: account });
+      console.log('Estimated gas for case submission:', gasEstimate);
+    } catch (error: any) {
+      console.error('Gas estimation failed:', error);
+      throw new Error(`Gas estimation failed: ${error.message}`);
+    }
+
+    // Convert bigint to number safely and add buffer
+    const gasLimit = Math.floor(Number(gasEstimate.toString()) * 1.2).toString();
+    console.log('Using gas limit:', gasLimit);
+
+    const result = await contract.methods.submitCase(blockchainInput)
+      .send({ 
+        from: account,
+        gas: gasLimit
+      });
+
+    console.log('Case submission transaction complete:', {
+      transactionHash: result.transactionHash,
+      events: result.events
+    });
+
+    if (!result.events?.CaseSubmitted?.returnValues?.caseId) {
+      throw new Error("Failed to get case ID from blockchain event");
+    }
+
+    const blockchainCaseId = Number(result.events.CaseSubmitted.returnValues.caseId);
+    console.log('Successfully received blockchain case ID:', blockchainCaseId);
+
+    return blockchainCaseId;
+  } catch (error: any) {
+    console.error('Error submitting case to blockchain:', error);
+    throw new Error(`Blockchain submission failed: ${error.message}`);
   }
 }
 
@@ -230,80 +309,5 @@ export async function submitCase(caseData: any, imageFile?: File): Promise<numbe
   } catch (error) {
     console.error("Error submitting case:", error);
     throw error;
-  }
-}
-
-interface CaseInput {
-  childName: string;
-  age: number;
-  location: string;
-  description: string;
-  contactInfo: string;
-  caseType: string;
-  imageUrl: string;
-  physicalTraits: string;
-}
-
-export async function submitCaseToBlockchain(caseInput: CaseInput): Promise<number> {
-  try {
-    console.log('Starting blockchain case submission...', { ...caseInput, childName: '***', contactInfo: '***' });
-    const contract = getContract();
-    const web3Instance = getWeb3();
-    const account = await getAddress();
-
-    if (!account) throw new Error("No connected account");
-
-    // First check if the contract is paused
-    const isPaused = await contract.methods.paused().call();
-    console.log('Contract pause status:', isPaused);
-    if (isPaused) {
-      throw new Error("Contract is currently paused");
-    }
-
-    // Prepare case data for blockchain
-    const blockchainInput = {
-      childName: web3Instance.utils.utf8ToHex(caseInput.childName),
-      age: caseInput.age,
-      location: web3Instance.utils.utf8ToHex(caseInput.location),
-      description: caseInput.description,
-      contactInfo: caseInput.contactInfo,
-      caseType: getCaseTypeEnum(caseInput.caseType),
-      imageUrl: caseInput.imageUrl,
-      physicalTraits: JSON.stringify({
-        description: caseInput.physicalTraits
-      })
-    };
-
-    console.log('Submitting case to blockchain...', { 
-      age: blockchainInput.age,
-      caseType: blockchainInput.caseType,
-      imageUrl: '***'
-    });
-
-    // Estimate gas for the transaction
-    const gasEstimate = await contract.methods.submitCase(blockchainInput)
-      .estimateGas({ from: account });
-    console.log('Estimated gas for case submission:', gasEstimate);
-
-    // Submit to blockchain with 20% gas buffer
-    const result = await contract.methods.submitCase(blockchainInput)
-      .send({ 
-        from: account,
-        gas: Math.floor(gasEstimate * 1.2).toString()
-      });
-
-    console.log('Case submission transaction complete:', {
-      transactionHash: result.transactionHash,
-      caseId: result.events?.CaseSubmitted?.returnValues?.caseId
-    });
-
-    if (!result.events?.CaseSubmitted?.returnValues?.caseId) {
-      throw new Error("Failed to get case ID from blockchain event");
-    }
-
-    return Number(result.events.CaseSubmitted.returnValues.caseId);
-  } catch (error: any) {
-    console.error('Error submitting case to blockchain:', error);
-    throw new Error(`Blockchain submission failed: ${error.message}`);
   }
 }
