@@ -1,32 +1,73 @@
 const hre = require("hardhat");
 
 async function main() {
-  console.log("Deploying CaseRegistry contract...");
+  try {
+    console.log("Starting CaseRegistry contract deployment...");
 
-  const CaseRegistry = await hre.ethers.getContractFactory("CaseRegistry");
-  const caseRegistry = await CaseRegistry.deploy();
+    const [deployer] = await hre.ethers.getSigners();
+    console.log("Deploying contracts with account:", deployer.address);
 
-  await caseRegistry.waitForDeployment();
-  const address = await caseRegistry.getAddress();
+    const CaseRegistry = await hre.ethers.getContractFactory("CaseRegistry");
+    const caseRegistry = await CaseRegistry.deploy();
 
-  console.log("CaseRegistry deployed to:", address);
+    console.log("Waiting for deployment confirmation...");
+    await caseRegistry.waitForDeployment();
 
-  // Verify the deployment
-  const adminRole = await caseRegistry.ADMIN_ROLE();
-  const [deployer] = await hre.ethers.getSigners();
-  const hasRole = await caseRegistry.hasRole(adminRole, deployer.address);
-  
-  console.log("Deployment verified:");
-  console.log("- Deployer address:", deployer.address);
-  console.log("- Has admin role:", hasRole);
+    const address = await caseRegistry.getAddress();
+    console.log("CaseRegistry deployed to:", address);
 
-  // Save the contract address to a file for frontend use
-  const fs = require('fs');
-  const path = require('path');
-  const envContent = `VITE_CONTRACT_ADDRESS=${address}\n`;
-  fs.writeFileSync('.env', envContent);
+    // Verify the deployment
+    const adminRole = await caseRegistry.ADMIN_ROLE();
+    const hasRole = await caseRegistry.hasRole(adminRole, deployer.address);
 
-  console.log("Contract address saved to .env file");
+    console.log("Deployment verification:");
+    console.log("- Deployer address:", deployer.address);
+    console.log("- Has admin role:", hasRole);
+
+    // Save the contract address to a file for frontend use
+    const fs = require('fs');
+    const path = require('path');
+    const envContent = `VITE_CONTRACT_ADDRESS=${address}\n`;
+    fs.writeFileSync('.env', envContent);
+
+    console.log("Contract address saved to .env file");
+
+    // Test case submission
+    console.log("Submitting test case...");
+    const testCase = {
+      childName: "Test Child",
+      age: 10,
+      location: "Test Location",
+      description: "Test Description",
+      contactInfo: "Test Contact",
+      caseType: 0, // Missing
+      imageUrl: "",
+      physicalTraits: ""
+    };
+
+    const tx = await caseRegistry.submitCase(testCase);
+    await tx.wait();
+    console.log("Test case submitted successfully");
+
+    // Test case status update
+    console.log("Testing status update...");
+    const updateTx = await caseRegistry.updateCaseStatus(1, 1); // Set to Investigating
+    await updateTx.wait();
+    console.log("Status updated successfully");
+
+    // Verify case details
+    const caseCore = await caseRegistry.getCaseCore(1);
+    const caseDetails = await caseRegistry.getCaseDetails(1);
+    console.log("Case verification:", {
+      core: caseCore,
+      details: caseDetails
+    });
+
+    console.log("Contract deployment and verification completed successfully");
+  } catch (error) {
+    console.error("Deployment failed:", error);
+    process.exit(1);
+  }
 }
 
 main()
