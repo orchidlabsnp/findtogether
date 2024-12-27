@@ -1,0 +1,596 @@
+[
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "AccessControlBadConfirmation",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "neededRole",
+				"type": "bytes32"
+			}
+		],
+		"name": "AccessControlUnauthorizedAccount",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "caseIds",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "enum CaseRegistry.Status",
+				"name": "newStatus",
+				"type": "uint8"
+			}
+		],
+		"name": "batchUpdateStatus",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "caseId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum CaseRegistry.Status",
+				"name": "newStatus",
+				"type": "uint8"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "updatedBy",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint40",
+				"name": "timestamp",
+				"type": "uint40"
+			}
+		],
+		"name": "CaseStatusUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "caseId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "childName",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "reporter",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint40",
+				"name": "timestamp",
+				"type": "uint40"
+			}
+		],
+		"name": "CaseSubmitted",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "grantRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "pause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "Paused",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "callerConfirmation",
+				"type": "address"
+			}
+		],
+		"name": "renounceRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "revokeRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "previousAdminRole",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "newAdminRole",
+				"type": "bytes32"
+			}
+		],
+		"name": "RoleAdminChanged",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			}
+		],
+		"name": "RoleGranted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			}
+		],
+		"name": "RoleRevoked",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "caseId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "analysis",
+				"type": "string"
+			}
+		],
+		"name": "setAiAnalysis",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"components": [
+					{
+						"internalType": "string",
+						"name": "childName",
+						"type": "string"
+					},
+					{
+						"internalType": "uint8",
+						"name": "age",
+						"type": "uint8"
+					},
+					{
+						"internalType": "string",
+						"name": "location",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "description",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "contactInfo",
+						"type": "string"
+					},
+					{
+						"internalType": "enum CaseRegistry.CaseType",
+						"name": "caseType",
+						"type": "uint8"
+					},
+					{
+						"internalType": "string",
+						"name": "imageUrl",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "physicalTraits",
+						"type": "string"
+					}
+				],
+				"internalType": "struct CaseRegistry.CaseInput",
+				"name": "input",
+				"type": "tuple"
+			}
+		],
+		"name": "submitCase",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "unpause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "Unpaused",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "caseId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "enum CaseRegistry.Status",
+				"name": "newStatus",
+				"type": "uint8"
+			}
+		],
+		"name": "updateCaseStatus",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "ADMIN_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "DEFAULT_ADMIN_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "caseId",
+				"type": "uint256"
+			}
+		],
+		"name": "getCaseCore",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "bytes32",
+						"name": "childName",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "uint8",
+						"name": "age",
+						"type": "uint8"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "location",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "enum CaseRegistry.Status",
+						"name": "status",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum CaseRegistry.CaseType",
+						"name": "caseType",
+						"type": "uint8"
+					},
+					{
+						"internalType": "address",
+						"name": "reporter",
+						"type": "address"
+					},
+					{
+						"internalType": "uint40",
+						"name": "timestamp",
+						"type": "uint40"
+					}
+				],
+				"internalType": "struct CaseRegistry.CaseCore",
+				"name": "",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "caseId",
+				"type": "uint256"
+			}
+		],
+		"name": "getCaseDetails",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "string",
+						"name": "description",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "contactInfo",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "imageUrl",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "aiAnalysis",
+						"type": "string"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "physicalTraits",
+						"type": "bytes32"
+					}
+				],
+				"internalType": "struct CaseRegistry.CaseDetails",
+				"name": "",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			}
+		],
+		"name": "getRoleAdmin",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getUserCases",
+		"outputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "hasRole",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "paused",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes4",
+				"name": "interfaceId",
+				"type": "bytes4"
+			}
+		],
+		"name": "supportsInterface",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
