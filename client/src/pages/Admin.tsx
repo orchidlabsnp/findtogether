@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, MapPin, Tag, Clock, Calendar, PlayCircle, PauseCircle, UserPlus, UserMinus } from "lucide-react";
+import { Loader2, MapPin, Tag, Clock, Calendar, PlayCircle, PauseCircle } from "lucide-react";
 import { format } from "date-fns";
 import { getContract, getAddress, getCaseStatusEnum } from "@/lib/web3";
 
@@ -218,8 +218,27 @@ export default function Admin() {
   const handleStatusUpdate = async (caseId: number, newStatus: string) => {
     setIsUpdating(true);
     setUpdatingCaseId(caseId);
+
     try {
-      // Update status in database
+      // First update the blockchain
+      const contract = getContract();
+      const address = await getAddress();
+
+      if (!address) throw new Error("No connected account");
+
+      // Convert status to enum value (0, 1, 2)
+      const statusEnum = getCaseStatusEnum(newStatus);
+      console.log('Updating case status on blockchain:', { caseId, statusEnum, address });
+
+      // Send transaction to blockchain
+      const tx = await contract.methods.updateCaseStatus(
+        caseId,
+        statusEnum
+      ).send({ from: address });
+
+      console.log('Blockchain transaction complete:', tx);
+
+      // If blockchain update succeeds, update database
       const response = await fetch(`/api/cases/${caseId}/status`, {
         method: 'PUT',
         headers: {
@@ -232,26 +251,17 @@ export default function Admin() {
         throw new Error(await response.text());
       }
 
-      // Update status on blockchain
-      const contract = getContract();
-      const address = await getAddress();
-
-      if (!address) throw new Error("No connected account");
-
-      await contract.methods.updateCaseStatus(caseId, getCaseStatusEnum(newStatus))
-        .send({ from: address });
-
       await queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
 
       toast({
         title: "Status Updated",
         description: "Case status has been successfully updated",
       });
-
     } catch (error: any) {
+      console.error('Error updating status:', error);
       toast({
         title: "Update Failed",
-        description: error.message,
+        description: error.message || "Failed to update case status",
         variant: "destructive",
       });
     } finally {
