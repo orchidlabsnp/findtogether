@@ -278,28 +278,14 @@ export default function Admin() {
                 }}
               />
               <span className="font-mono text-sm text-gray-500">#{case_.id}</span>
-              <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+              <h3 className="text-base font-semibold text-gray-900">
                 {case_.childName}
                 {case_.blockchainCaseId && (
                   <Badge 
                     variant="secondary" 
-                    className="bg-blue-100 text-blue-800 border-blue-200 flex items-center gap-1"
-                    title={`Blockchain Case ID: ${case_.blockchainCaseId}`}
+                    className="ml-2 text-xs"
+                    title="This case is stored on blockchain"
                   >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-3 w-3"
-                    >
-                      <rect width="20" height="12" x="2" y="6" rx="2" />
-                      <path d="M12 12h.01" />
-                      <path d="M17 12h.01" />
-                      <path d="M7 12h.01" />
-                    </svg>
                     Blockchain
                   </Badge>
                 )}
@@ -385,7 +371,7 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden mt-10">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

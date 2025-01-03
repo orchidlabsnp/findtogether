@@ -2,13 +2,12 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { cases, users } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { generateCaseNarrative } from "./lib/openai";
-import { initializeNotificationService, getNotificationService } from './services/notifications';
 
 // Add detailed logging for troubleshooting
 const logError = (context: string, error: any) => {
@@ -41,13 +40,6 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
-
-  // Create HTTP server
-  const httpServer = createServer(app);
-
-  // Initialize notification service and configure emergency contacts
-  const notificationService = initializeNotificationService(httpServer);
-  notificationService.setEmergencyContacts(['testbug3478@gmail.com', 'testbug2734@gmail.com']);
 
   // Get all cases endpoint with improved error handling
   app.get("/api/cases", async (req, res) => {
@@ -170,26 +162,6 @@ export function registerRoutes(app: Express): Server {
         createdAt: new Date(),
         updatedAt: new Date()
       }).returning();
-
-      // Send notifications for urgent case types
-      if (caseType === 'child_labour' || caseType === 'child_harassment') {
-        try {
-          const notificationService = getNotificationService();
-          await notificationService.sendUrgentCaseAlert({
-            childName,
-            age: parseInt(age),
-            location,
-            caseType,
-            description,
-            contactInfo
-          });
-          console.log(`Urgent notifications sent for ${caseType} case`);
-        } catch (error) {
-          console.error('Failed to send urgent notifications:', error);
-          // Continue with the response even if notifications fail
-          console.log('Continuing despite notification failure');
-        }
-      }
 
       console.log("Case created successfully:", newCase);
       res.json({ case: newCase });
@@ -347,6 +319,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+
   app.post("/api/users", async (req, res) => {
     try {
       const { address } = req.body;
@@ -496,5 +469,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  const httpServer = createServer(app);
   return httpServer;
 }

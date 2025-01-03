@@ -1,6 +1,5 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import type { Server } from 'http';
-import nodemailer from 'nodemailer';
 
 interface SafetyAlert {
   type: 'SAFETY_ALERT';
@@ -19,24 +18,11 @@ interface CaseUpdate {
   timestamp: string;
 }
 
-interface EmailConfig {
-  admins: string[];
-  emergencyContacts: string[]; // Added emergency contacts
-  senderEmail: string;
-  retryAttempts: number;
-}
-
 type Notification = SafetyAlert | CaseUpdate;
 
 class NotificationService {
   private wss: WebSocketServer;
   private clients: Set<WebSocket> = new Set();
-  private emailConfig: EmailConfig = {
-    admins: ['admin@childprotection.org'], // Default admin email
-    emergencyContacts: [], // Emergency contacts for urgent cases
-    senderEmail: 'childprotection@gmail.com',
-    retryAttempts: 3
-  };
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 
@@ -55,7 +41,10 @@ class NotificationService {
 
   private setupWebSocket() {
     this.wss.on('connection', (ws) => {
+      // Add new client
       this.clients.add(ws);
+
+      // Remove client on disconnect
       ws.on('close', () => {
         this.clients.delete(ws);
       });
@@ -83,193 +72,34 @@ class NotificationService {
     });
   }
 
-  private async createEmailTransporter() {
-    if (!process.env.GMAIL_APP_PASSWORD) {
-      throw new Error('Email configuration missing: GMAIL_APP_PASSWORD not set');
-    }
-
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: this.emailConfig.senderEmail,
-        pass: process.env.GMAIL_APP_PASSWORD
-      }
-    });
-  }
-
-  private async sendEmailWithRetry(
-    subject: string,
-    htmlContent: string,
-    recipients: string[],
-    attempt: number = 1
-  ) {
-    try {
-      const transporter = await this.createEmailTransporter();
-      await transporter.sendMail({
-        from: `"Child Protection Alert System" <${this.emailConfig.senderEmail}>`,
-        to: recipients.join(', '),
-        subject,
-        html: htmlContent
-      });
-      console.log(`Email alert sent successfully to ${recipients.length} recipients`);
-    } catch (error) {
-      console.error(`Email attempt ${attempt} failed:`, error);
-      if (attempt < this.emailConfig.retryAttempts) {
-        const delay = Math.min(1000 * Math.pow(2, attempt), 30000); // Exponential backoff, max 30s
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return this.sendEmailWithRetry(subject, htmlContent, recipients, attempt + 1);
-      }
-      throw error;
-    }
-  }
-
-  private generateEmailTemplate(
+  public broadcastSafetyAlert(
     title: string,
-    content: Record<string, string | number>,
-    severity: 'high' | 'medium' | 'low' = 'high',
-    isEmergency: boolean = false
+    message: string,
+    severity: SafetyAlert['severity'],
+    location?: string
   ) {
-    const colors = {
-      high: '#d32f2f',
-      medium: '#ed6c02',
-      low: '#2e7d32'
-    };
-
-    const contentHtml = Object.entries(content)
-      .map(([key, value]) => `
-        <li>
-          <strong>${key.replace(/([A-Z])/g, ' $1').trim()}:</strong> ${value}
-        </li>
-      `).join('');
-
-    return `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        ${isEmergency ? `
-          <div style="background-color: #d32f2f; color: white; padding: 10px; text-align: center; margin-bottom: 20px;">
-            <h1 style="margin: 0;">⚠️ EMERGENCY ALERT ⚠️</h1>
-          </div>
-        ` : ''}
-        <h2 style="color: ${colors[severity]}; margin-bottom: 20px;">${title}</h2>
-        <div style="background-color: ${severity === 'high' ? '#fef2f2' : '#fff7ed'}; 
-                    padding: 20px; border-radius: 8px; margin: 15px 0;">
-          <ul style="list-style: none; padding: 0; margin: 0;">
-            ${contentHtml}
-          </ul>
-        </div>
-        <p style="color: ${colors[severity]}; font-weight: bold; margin-top: 20px;">
-          ${isEmergency ? 'IMMEDIATE ACTION REQUIRED' : 'This case requires attention.'}
-        </p>
-        <hr style="margin: 20px 0;">
-        <p style="font-size: 12px; color: #666;">
-          This is an automated alert from the Child Protection System.
-          Please do not reply to this email.
-          <br>
-          Sent at: ${new Date().toLocaleString()}
-        </p>
-      </div>
-    `;
-  }
-
-  public async sendUrgentCaseAlert({
-    childName,
-    age,
-    location,
-    caseType,
-    description,
-    contactInfo
-  }: {
-    childName: string;
-    age: number;
-    location: string;
-    caseType: string;
-    description: string;
-    contactInfo: string;
-  }) {
-    const title = `URGENT: New ${caseType.replace('_', ' ')} Case Reported`;
-    const content = {
-      'Case Type': caseType.replace('_', ' ').toUpperCase(),
-      'Child Name': childName,
-      'Age': age,
-      'Location': location,
-      'Description': description,
-      'Contact Information': contactInfo
-    };
-
-    // Send WebSocket notification
     this.broadcast({
       type: 'SAFETY_ALERT',
       title,
-      message: `New urgent case reported: ${caseType} in ${location}`,
-      severity: 'critical',
+      message,
+      severity,
       timestamp: new Date().toISOString(),
-      location
+      location,
     });
+  }
 
-    // Send email notifications if configured
-    if (process.env.GMAIL_APP_PASSWORD) {
-      try {
-        // Send emergency notification first
-        if (this.emailConfig.emergencyContacts.length > 0) {
-          const emergencyHtml = this.generateEmailTemplate(title, content, 'high', true);
-          await this.sendEmailWithRetry(
-            `🚨 EMERGENCY: ${title}`, 
-            emergencyHtml,
-            this.emailConfig.emergencyContacts
-          );
-        }
-
-        // Send regular admin notification
-        const adminHtml = this.generateEmailTemplate(title, content, 'high');
-        await this.sendEmailWithRetry(title, adminHtml, this.emailConfig.admins);
-      } catch (error) {
-        console.error('Failed to send email notification:', error);
-        // Don't throw - we want the case submission to continue even if email fails
-      }
-    } else {
-      console.log('Email notifications not configured - GMAIL_APP_PASSWORD not set');
-    }
-
-    // Log to console for monitoring
-    console.log('\n=== URGENT CASE ALERT ===');
-    Object.entries(content).forEach(([key, value]) => {
-      console.log(`${key}: ${value}`);
+  public broadcastCaseUpdate(
+    caseId: number,
+    status: string,
+    message: string
+  ) {
+    this.broadcast({
+      type: 'CASE_UPDATE',
+      caseId,
+      status,
+      message,
+      timestamp: new Date().toISOString(),
     });
-    console.log('========================\n');
-  }
-
-  public setEmergencyContacts(emails: string[]) {
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const invalidEmails = emails.filter(email => !emailRegex.test(email));
-    if (invalidEmails.length > 0) {
-      throw new Error(`Invalid email format: ${invalidEmails.join(', ')}`);
-    }
-    this.emailConfig.emergencyContacts = emails;
-  }
-
-  public setAdminEmails(emails: string[]) {
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const invalidEmails = emails.filter(email => !emailRegex.test(email));
-    if (invalidEmails.length > 0) {
-      throw new Error(`Invalid email format: ${invalidEmails.join(', ')}`);
-    }
-    this.emailConfig.admins = emails;
-  }
-
-  public setSenderEmail(email: string) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      throw new Error('Invalid sender email format');
-    }
-    this.emailConfig.senderEmail = email;
-  }
-
-  public setRetryAttempts(attempts: number) {
-    if (!Number.isInteger(attempts) || attempts < 1 || attempts > 10) {
-      throw new Error('Retry attempts must be an integer between 1 and 10');
-    }
-    this.emailConfig.retryAttempts = attempts;
   }
 }
 
