@@ -39,15 +39,19 @@ export async function getAddress(): Promise<string | null> {
   return null;
 }
 
-// Get Web3 instance
+// Get Web3 instance with validation
 function getWeb3() {
   if (typeof window.ethereum !== "undefined") {
-    return new Web3(window.ethereum);
+    const web3 = new Web3(window.ethereum);
+    if (!web3) {
+      throw new Error("Failed to initialize Web3");
+    }
+    return web3;
   }
   throw new Error("MetaMask is not installed");
 }
 
-// Get contract instance with error handling
+// Get contract instance with validation
 export function getContract() {
   try {
     const web3Instance = getWeb3();
@@ -91,7 +95,119 @@ export function getCaseStatusString(status: number): string {
   return statuses[status] || 'open';
 }
 
-// Smart contract interaction functions
+// Blockchain interaction functions
+export async function submitCaseToBlockchain(caseInput: {
+  childName: string;
+  age: number;
+  location: string;
+  description: string;
+  contactInfo: string;
+  caseType: string;
+  imageUrl: string;
+  physicalTraits: string;
+}): Promise<number> {
+  try {
+    const contract = getContract();
+    const web3Instance = getWeb3();
+    const account = await getAddress();
+
+    if (!account) throw new Error("No connected account");
+
+    // Check if contract is paused
+    const isPaused = await contract.methods.paused().call();
+    if (isPaused) {
+      throw new Error("Contract is currently paused");
+    }
+
+    // Validate inputs
+    if (!caseInput.childName || !caseInput.location) {
+      throw new Error("Required fields missing");
+    }
+
+    // Convert strings to bytes32
+    const blockchainInput = {
+      childName: web3Instance.utils.padRight(web3Instance.utils.asciiToHex(caseInput.childName), 64),
+      age: caseInput.age,
+      location: web3Instance.utils.padRight(web3Instance.utils.asciiToHex(caseInput.location), 64),
+      description: caseInput.description || '',
+      contactInfo: caseInput.contactInfo || '',
+      caseType: getCaseTypeEnum(caseInput.caseType),
+      imageUrl: caseInput.imageUrl || '',
+      physicalTraits: caseInput.physicalTraits || ''
+    };
+
+    console.log('Submitting case to blockchain with input:', {
+      age: blockchainInput.age,
+      caseType: blockchainInput.caseType,
+      // Sensitive data redacted from logs
+      location: '[REDACTED]',
+      description: '[REDACTED]'
+    });
+
+    // Estimate gas with proper error handling
+    let gasEstimate;
+    try {
+      gasEstimate = await contract.methods.submitCase(
+        blockchainInput.childName,
+        blockchainInput.age,
+        blockchainInput.location,
+        blockchainInput.description,
+        blockchainInput.contactInfo,
+        blockchainInput.caseType,
+        blockchainInput.imageUrl,
+        blockchainInput.physicalTraits
+      ).estimateGas({ from: account });
+      console.log('Gas estimate:', gasEstimate);
+    } catch (error: any) {
+      console.error('Gas estimation failed:', error);
+      if (error.message.includes("execution reverted")) {
+        throw new Error("Transaction would fail: " + error.message);
+      }
+      throw new Error("Gas estimation failed: " + error.message);
+    }
+
+    // Add 20% buffer to gas limit
+    const gasLimit = Math.floor(Number(gasEstimate) * 1.2).toString();
+    console.log('Using gas limit:', gasLimit);
+
+    // Submit transaction
+    const result = await contract.methods.submitCase(
+      blockchainInput.childName,
+      blockchainInput.age,
+      blockchainInput.location,
+      blockchainInput.description,
+      blockchainInput.contactInfo,
+      blockchainInput.caseType,
+      blockchainInput.imageUrl,
+      blockchainInput.physicalTraits
+    ).send({ 
+      from: account,
+      gas: gasLimit
+    });
+
+    // Verify event emission
+    if (!result.events?.CaseSubmitted?.returnValues?.caseId) {
+      throw new Error("Failed to get case ID from blockchain event");
+    }
+
+    const blockchainCaseId = Number(result.events.CaseSubmitted.returnValues.caseId);
+    console.log('Successfully received blockchain case ID:', blockchainCaseId);
+
+    return blockchainCaseId;
+  } catch (error: any) {
+    console.error('Error submitting case to blockchain:', error);
+    // Provide more specific error messages
+    if (error.message.includes("User denied")) {
+      throw new Error("Transaction was rejected by user");
+    } else if (error.message.includes("insufficient funds")) {
+      throw new Error("Insufficient funds for gas");
+    } else if (error.message.includes("nonce too low")) {
+      throw new Error("Please reset your MetaMask account");
+    }
+    throw error;
+  }
+}
+
 export async function updateCaseStatus(caseId: number, newStatus: string): Promise<void> {
   try {
     const contract = getContract();
@@ -102,12 +218,20 @@ export async function updateCaseStatus(caseId: number, newStatus: string): Promi
     const statusEnum = getCaseStatusEnum(newStatus);
     console.log('Updating case status:', { caseId, statusEnum, address });
 
-    // Estimate gas with a buffer
-    const gasEstimate = await contract.methods.updateCaseStatus(caseId, statusEnum)
-      .estimateGas({ from: address });
-    const gasLimit = Math.floor(Number(gasEstimate.toString()) * 1.2).toString();
+    // Estimate gas with proper error handling
+    let gasEstimate;
+    try {
+      gasEstimate = await contract.methods.updateCaseStatus(caseId, statusEnum)
+        .estimateGas({ from: address });
+    } catch (error: any) {
+      console.error('Gas estimation failed:', error);
+      throw new Error(`Gas estimation failed: ${error.message}`);
+    }
 
-    // Send the transaction
+    // Add 20% buffer to gas limit
+    const gasLimit = Math.floor(Number(gasEstimate) * 1.2).toString();
+
+    // Send transaction
     const tx = await contract.methods.updateCaseStatus(caseId, statusEnum).send({
       from: address,
       gas: gasLimit
@@ -130,12 +254,20 @@ export async function batchUpdateStatus(caseIds: number[], newStatus: string): P
     const statusEnum = getCaseStatusEnum(newStatus);
     console.log('Batch updating case statuses:', { caseIds, statusEnum, address });
 
-    // Estimate gas with a buffer
-    const gasEstimate = await contract.methods.batchUpdateStatus(caseIds, statusEnum)
-      .estimateGas({ from: address });
-    const gasLimit = Math.floor(Number(gasEstimate.toString()) * 1.2).toString();
+    // Estimate gas with proper error handling
+    let gasEstimate;
+    try {
+      gasEstimate = await contract.methods.batchUpdateStatus(caseIds, statusEnum)
+        .estimateGas({ from: address });
+    } catch (error: any) {
+      console.error('Gas estimation failed:', error);
+      throw new Error(`Gas estimation failed: ${error.message}`);
+    }
 
-    // Send the transaction
+    // Add 20% buffer to gas limit
+    const gasLimit = Math.floor(Number(gasEstimate) * 1.2).toString();
+
+    // Send transaction
     const tx = await contract.methods.batchUpdateStatus(caseIds, statusEnum).send({
       from: address,
       gas: gasLimit
@@ -145,94 +277,6 @@ export async function batchUpdateStatus(caseIds: number[], newStatus: string): P
   } catch (error: any) {
     console.error('Error in batchUpdateStatus:', error);
     throw error;
-  }
-}
-
-export async function submitCaseToBlockchain(caseInput: {
-  childName: string;
-  age: number;
-  location: string;
-  description: string;
-  contactInfo: string;
-  caseType: string;
-  imageUrl: string;
-  physicalTraits: string;
-}): Promise<number> {
-  try {
-    console.log('Starting blockchain case submission...', { 
-      age: caseInput.age,
-      caseType: caseInput.caseType,
-      location: caseInput.location 
-    });
-
-    const contract = getContract();
-    const web3Instance = getWeb3();
-    const account = await getAddress();
-
-    if (!account) throw new Error("No connected account");
-
-    // First check if the contract is paused
-    const isPaused = await contract.methods.paused().call();
-    console.log('Contract pause status:', isPaused);
-    if (isPaused) {
-      throw new Error("Contract is currently paused");
-    }
-
-    // Prepare case data for blockchain
-    const blockchainInput = {
-      childName: web3Instance.utils.utf8ToHex(caseInput.childName),
-      age: caseInput.age,
-      location: web3Instance.utils.utf8ToHex(caseInput.location),
-      description: caseInput.description,
-      contactInfo: caseInput.contactInfo,
-      caseType: getCaseTypeEnum(caseInput.caseType),
-      imageUrl: caseInput.imageUrl,
-      physicalTraits: caseInput.physicalTraits
-    };
-
-    console.log('Submitting case to blockchain...', { 
-      age: blockchainInput.age,
-      caseType: blockchainInput.caseType,
-      hexLocation: blockchainInput.location
-    });
-
-    // Estimate gas for the transaction
-    let gasEstimate;
-    try {
-      gasEstimate = await contract.methods.submitCase(blockchainInput)
-        .estimateGas({ from: account });
-      console.log('Estimated gas for case submission:', gasEstimate);
-    } catch (error: any) {
-      console.error('Gas estimation failed:', error);
-      throw new Error(`Gas estimation failed: ${error.message}`);
-    }
-
-    // Convert bigint to number safely and add buffer
-    const gasLimit = Math.floor(Number(gasEstimate.toString()) * 1.2).toString();
-    console.log('Using gas limit:', gasLimit);
-
-    const result = await contract.methods.submitCase(blockchainInput)
-      .send({ 
-        from: account,
-        gas: gasLimit
-      });
-
-    console.log('Case submission transaction complete:', {
-      transactionHash: result.transactionHash,
-      events: result.events
-    });
-
-    if (!result.events?.CaseSubmitted?.returnValues?.caseId) {
-      throw new Error("Failed to get case ID from blockchain event");
-    }
-
-    const blockchainCaseId = Number(result.events.CaseSubmitted.returnValues.caseId);
-    console.log('Successfully received blockchain case ID:', blockchainCaseId);
-
-    return blockchainCaseId;
-  } catch (error: any) {
-    console.error('Error submitting case to blockchain:', error);
-    throw new Error(`Blockchain submission failed: ${error.message}`);
   }
 }
 
