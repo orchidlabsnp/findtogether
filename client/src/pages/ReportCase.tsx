@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useRef, useState, useEffect } from 'react';
-import { submitCaseToBlockchain, type CaseSubmission } from "@/lib/blockchain";
+import { submitCaseToBlockchain } from "@/lib/web3";
 import {
   Select,
   SelectContent,
@@ -136,15 +136,7 @@ export default function ReportCase() {
   const submitToBlockchain = async (caseData: any) => {
     try {
       setBlockchainSubmitting(true);
-      console.log('Starting blockchain submission for case:', caseData.id);
-
-      // Validate case data before submission
-      if (!caseData) {
-        throw new Error("No case data available for blockchain submission");
-      }
-
-      // Prepare blockchain input
-      const blockchainCaseData: CaseSubmission = {
+      const blockchainCaseId = await submitCaseToBlockchain({
         childName: caseData.childName,
         age: caseData.age,
         location: caseData.location,
@@ -158,13 +150,14 @@ export default function ReportCase() {
           height: caseData.height,
           weight: caseData.weight
         })
-      };
+      });
 
-      const blockchainCaseId = await submitCaseToBlockchain(blockchainCaseData);
-      console.log('Successfully received blockchain case ID:', blockchainCaseId);
+      toast({
+        title: "Success",
+        description: "Case has been permanently recorded on the blockchain.",
+      });
 
-      // Update database with blockchain case ID
-      const response = await fetch(`/api/cases/${caseData.id}/blockchain`, {
+      await fetch(`/api/cases/${caseData.id}/blockchain`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -172,21 +165,12 @@ export default function ReportCase() {
         body: JSON.stringify({ blockchainCaseId }),
       });
 
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      toast({
-        title: "Success",
-        description: "Case has been permanently recorded on the blockchain.",
-      });
-
       setLocation("/find");
     } catch (error: any) {
       console.error('Blockchain submission error:', error);
       toast({
-        title: "Blockchain Submission Failed",
-        description: error.message,
+        title: "Warning",
+        description: "Failed to store case on blockchain. You can try again later from the case details page.",
         variant: "destructive"
       });
       setLocation("/find");
