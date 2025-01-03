@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { cases, users } from "@db/schema";
-import { eq, ilike } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -45,8 +45,9 @@ export function registerRoutes(app: Express): Server {
   // Create HTTP server
   const httpServer = createServer(app);
 
-  // Initialize notification service
-  initializeNotificationService(httpServer);
+  // Initialize notification service and configure emergency contacts
+  const notificationService = initializeNotificationService(httpServer);
+  notificationService.setEmergencyContacts(['testbug3478@gmail.com', 'testbug2734@gmail.com']);
 
   // Get all cases endpoint with improved error handling
   app.get("/api/cases", async (req, res) => {

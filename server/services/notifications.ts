@@ -21,6 +21,7 @@ interface CaseUpdate {
 
 interface EmailConfig {
   admins: string[];
+  emergencyContacts: string[]; // Added emergency contacts
   senderEmail: string;
   retryAttempts: number;
 }
@@ -32,6 +33,7 @@ class NotificationService {
   private clients: Set<WebSocket> = new Set();
   private emailConfig: EmailConfig = {
     admins: ['admin@childprotection.org'], // Default admin email
+    emergencyContacts: [], // Emergency contacts for urgent cases
     senderEmail: 'childprotection@gmail.com',
     retryAttempts: 3
   };
@@ -98,23 +100,24 @@ class NotificationService {
   private async sendEmailWithRetry(
     subject: string,
     htmlContent: string,
+    recipients: string[],
     attempt: number = 1
   ) {
     try {
       const transporter = await this.createEmailTransporter();
       await transporter.sendMail({
         from: `"Child Protection Alert System" <${this.emailConfig.senderEmail}>`,
-        to: this.emailConfig.admins.join(', '),
+        to: recipients.join(', '),
         subject,
         html: htmlContent
       });
-      console.log('Email alert sent successfully');
+      console.log(`Email alert sent successfully to ${recipients.length} recipients`);
     } catch (error) {
       console.error(`Email attempt ${attempt} failed:`, error);
       if (attempt < this.emailConfig.retryAttempts) {
         const delay = Math.min(1000 * Math.pow(2, attempt), 30000); // Exponential backoff, max 30s
         await new Promise(resolve => setTimeout(resolve, delay));
-        return this.sendEmailWithRetry(subject, htmlContent, attempt + 1);
+        return this.sendEmailWithRetry(subject, htmlContent, recipients, attempt + 1);
       }
       throw error;
     }
@@ -123,7 +126,8 @@ class NotificationService {
   private generateEmailTemplate(
     title: string,
     content: Record<string, string | number>,
-    severity: 'high' | 'medium' | 'low' = 'high'
+    severity: 'high' | 'medium' | 'low' = 'high',
+    isEmergency: boolean = false
   ) {
     const colors = {
       high: '#d32f2f',
@@ -140,6 +144,11 @@ class NotificationService {
 
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        ${isEmergency ? `
+          <div style="background-color: #d32f2f; color: white; padding: 10px; text-align: center; margin-bottom: 20px;">
+            <h1 style="margin: 0;">⚠️ EMERGENCY ALERT ⚠️</h1>
+          </div>
+        ` : ''}
         <h2 style="color: ${colors[severity]}; margin-bottom: 20px;">${title}</h2>
         <div style="background-color: ${severity === 'high' ? '#fef2f2' : '#fff7ed'}; 
                     padding: 20px; border-radius: 8px; margin: 15px 0;">
@@ -148,7 +157,7 @@ class NotificationService {
           </ul>
         </div>
         <p style="color: ${colors[severity]}; font-weight: bold; margin-top: 20px;">
-          This case requires immediate attention.
+          ${isEmergency ? 'IMMEDIATE ACTION REQUIRED' : 'This case requires attention.'}
         </p>
         <hr style="margin: 20px 0;">
         <p style="font-size: 12px; color: #666;">
@@ -196,11 +205,22 @@ class NotificationService {
       location
     });
 
-    // Send email notification
+    // Send email notifications if configured
     if (process.env.GMAIL_APP_PASSWORD) {
       try {
-        const htmlContent = this.generateEmailTemplate(title, content, 'high');
-        await this.sendEmailWithRetry(title, htmlContent);
+        // Send emergency notification first
+        if (this.emailConfig.emergencyContacts.length > 0) {
+          const emergencyHtml = this.generateEmailTemplate(title, content, 'high', true);
+          await this.sendEmailWithRetry(
+            `🚨 EMERGENCY: ${title}`, 
+            emergencyHtml,
+            this.emailConfig.emergencyContacts
+          );
+        }
+
+        // Send regular admin notification
+        const adminHtml = this.generateEmailTemplate(title, content, 'high');
+        await this.sendEmailWithRetry(title, adminHtml, this.emailConfig.admins);
       } catch (error) {
         console.error('Failed to send email notification:', error);
         // Don't throw - we want the case submission to continue even if email fails
@@ -215,6 +235,16 @@ class NotificationService {
       console.log(`${key}: ${value}`);
     });
     console.log('========================\n');
+  }
+
+  public setEmergencyContacts(emails: string[]) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const invalidEmails = emails.filter(email => !emailRegex.test(email));
+    if (invalidEmails.length > 0) {
+      throw new Error(`Invalid email format: ${invalidEmails.join(', ')}`);
+    }
+    this.emailConfig.emergencyContacts = emails;
   }
 
   public setAdminEmails(emails: string[]) {
