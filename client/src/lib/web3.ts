@@ -1,6 +1,6 @@
 import Web3 from 'web3';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from './contract';
-import { uploadToIPFS, uploadJSONToIPFS } from './ipfs';
+import { uploadToIPFS } from './ipfs';
 
 declare global {
   interface Window {
@@ -39,8 +39,11 @@ export async function getAddress(): Promise<string | null> {
   return null;
 }
 
+// Constants from the smart contract
+const ADMIN_ROLE = "0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775";
+
 // Get Web3 instance with validation
-function getWeb3() {
+function getWeb3(): Web3 {
   if (typeof window.ethereum !== "undefined") {
     const web3 = new Web3(window.ethereum);
     if (!web3) {
@@ -68,12 +71,16 @@ export function getContract() {
 
 // Helper functions for enum conversion
 export function getCaseTypeEnum(type: string): number {
-  const types = {
+  const types: Record<string, number> = {
     'child_missing': 0,
     'child_labour': 1,
     'child_harassment': 2
   };
-  return types[type as keyof typeof types] ?? 0;
+  const enumValue = types[type.toLowerCase()];
+  if (enumValue === undefined) {
+    throw new Error(`Invalid case type: ${type}`);
+  }
+  return enumValue;
 }
 
 export function getCaseTypeString(type: number): string {
@@ -82,12 +89,16 @@ export function getCaseTypeString(type: number): string {
 }
 
 export function getCaseStatusEnum(status: string): number {
-  const statuses = {
+  const statuses: Record<string, number> = {
     'open': 0,
     'investigating': 1,
     'resolved': 2
   };
-  return statuses[status as keyof typeof statuses] ?? 0;
+  const statusEnum = statuses[status.toLowerCase()];
+  if (statusEnum === undefined) {
+    throw new Error(`Invalid status: ${status}`);
+  }
+  return statusEnum;
 }
 
 export function getCaseStatusString(status: number): string {
@@ -95,7 +106,13 @@ export function getCaseStatusString(status: number): string {
   return statuses[status] || 'open';
 }
 
-// Blockchain interaction functions
+// Helper function to convert string to bytes32
+function stringToBytes32(web3: Web3, str: string): string {
+  const truncated = str.slice(0, 31);
+  return web3.utils.padRight(web3.utils.fromUtf8(truncated), 64);
+}
+
+// Submit case to blockchain
 export async function submitCaseToBlockchain(caseInput: {
   childName: string;
   age: number;
@@ -107,8 +124,9 @@ export async function submitCaseToBlockchain(caseInput: {
   physicalTraits: string;
 }): Promise<number> {
   try {
-    const contract = getContract();
+    console.log('Starting blockchain submission...');
     const web3Instance = getWeb3();
+    const contract = getContract();
     const account = await getAddress();
 
     if (!account) throw new Error("No connected account");
@@ -124,28 +142,11 @@ export async function submitCaseToBlockchain(caseInput: {
       throw new Error("Required fields missing");
     }
 
-    // Convert strings to bytes32 and ensure proper formatting
-    const childNameBytes = web3Instance.utils.padRight(
-      web3Instance.utils.asciiToHex(caseInput.childName.slice(0, 32)),
-      64
-    );
-    const locationBytes = web3Instance.utils.padRight(
-      web3Instance.utils.asciiToHex(caseInput.location.slice(0, 32)),
-      64
-    );
-
-    console.log('Preparing blockchain submission...', {
-      childNameBytes,
-      locationBytes,
-      age: caseInput.age,
-      caseType: getCaseTypeEnum(caseInput.caseType)
-    });
-
-    // Prepare transaction parameters
+    // Prepare parameters with proper type conversion
     const params = [
-      childNameBytes,
-      caseInput.age,
-      locationBytes,
+      stringToBytes32(web3Instance, caseInput.childName),
+      Number(caseInput.age),
+      stringToBytes32(web3Instance, caseInput.location),
       caseInput.description || '',
       caseInput.contactInfo || '',
       getCaseTypeEnum(caseInput.caseType),
@@ -153,45 +154,52 @@ export async function submitCaseToBlockchain(caseInput: {
       caseInput.physicalTraits || ''
     ];
 
+    console.log('Submitting with parameters:', {
+      childName: params[0],
+      age: params[1],
+      location: params[2],
+      caseType: params[5]
+    });
+
+    // First validate parameters
+    const submitCase = contract.methods.submitCase(...params);
+
     // Estimate gas with proper error handling
     let gasEstimate;
     try {
-      gasEstimate = await contract.methods.submitCase(...params)
-        .estimateGas({ from: account });
-      console.log('Gas estimate:', gasEstimate);
+      gasEstimate = await submitCase.estimateGas({ from: account });
     } catch (error: any) {
       console.error('Gas estimation failed:', error);
       if (error.message.includes("execution reverted")) {
-        throw new Error("Transaction would fail: " + error.message);
+        throw new Error(`Contract execution would fail: ${error.message}`);
       }
-      throw new Error("Failed to estimate gas: " + error.message);
+      throw new Error(`Failed to estimate gas: ${error.message}`);
     }
 
-    // Add 20% buffer to gas limit
-    const gasLimit = Math.floor(Number(gasEstimate) * 1.2).toString();
+    // Add 30% buffer for safety
+    const gasLimit = Math.floor(Number(gasEstimate) * 1.3).toString();
 
     // Submit transaction
-    const result = await contract.methods.submitCase(...params)
-      .send({
-        from: account,
-        gas: gasLimit
-      });
+    const tx = await submitCase.send({
+      from: account,
+      gas: gasLimit
+    });
 
-    // Verify event emission and extract case ID
-    const event = result.events?.CaseSubmitted;
-    if (!event || !event.returnValues?.caseId) {
-      throw new Error("Failed to get case ID from blockchain event");
+    console.log('Transaction receipt:', tx);
+
+    if (!tx.events?.CaseSubmitted?.returnValues?.caseId) {
+      throw new Error("Failed to get case ID from event");
     }
 
-    const blockchainCaseId = Number(event.returnValues.caseId);
-    console.log('Successfully received blockchain case ID:', blockchainCaseId);
+    const caseId = Number(tx.events.CaseSubmitted.returnValues.caseId);
+    console.log('Successfully submitted case with ID:', caseId);
 
-    return blockchainCaseId;
+    return caseId;
   } catch (error: any) {
-    console.error('Error submitting case to blockchain:', error);
-    // Provide more specific error messages
+    console.error('Error in submitCaseToBlockchain:', error);
+    // Handle specific error cases
     if (error.message.includes("User denied")) {
-      throw new Error("Transaction was rejected in MetaMask");
+      throw new Error("Transaction rejected in MetaMask");
     } else if (error.message.includes("insufficient funds")) {
       throw new Error("Insufficient funds for gas");
     } else if (error.message.includes("nonce too low")) {
@@ -201,6 +209,7 @@ export async function submitCaseToBlockchain(caseInput: {
   }
 }
 
+// Update case status
 export async function updateCaseStatus(caseId: number, newStatus: string): Promise<void> {
   try {
     const contract = getContract();
@@ -211,24 +220,19 @@ export async function updateCaseStatus(caseId: number, newStatus: string): Promi
     const statusEnum = getCaseStatusEnum(newStatus);
     console.log('Updating case status:', { caseId, statusEnum, address });
 
-    // Estimate gas with proper error handling
-    let gasEstimate;
-    try {
-      gasEstimate = await contract.methods.updateCaseStatus(caseId, statusEnum)
-        .estimateGas({ from: address });
-    } catch (error: any) {
-      console.error('Gas estimation failed:', error);
-      throw new Error(`Gas estimation failed: ${error.message}`);
-    }
+    // Estimate gas
+    const gasEstimate = await contract.methods.updateCaseStatus(caseId, statusEnum)
+      .estimateGas({ from: address });
 
     // Add 20% buffer to gas limit
     const gasLimit = Math.floor(Number(gasEstimate) * 1.2).toString();
 
     // Send transaction
-    const tx = await contract.methods.updateCaseStatus(caseId, statusEnum).send({
-      from: address,
-      gas: gasLimit
-    });
+    const tx = await contract.methods.updateCaseStatus(caseId, statusEnum)
+      .send({
+        from: address,
+        gas: gasLimit
+      });
 
     console.log('Status update transaction complete:', tx);
   } catch (error: any) {
@@ -237,7 +241,8 @@ export async function updateCaseStatus(caseId: number, newStatus: string): Promi
   }
 }
 
-export async function batchUpdateStatus(caseIds: number[], newStatus: string): Promise<void> {
+// Batch update status
+export async function batchUpdateCaseStatus(caseIds: number[], newStatus: string): Promise<void> {
   try {
     const contract = getContract();
     const address = await getAddress();
@@ -247,24 +252,19 @@ export async function batchUpdateStatus(caseIds: number[], newStatus: string): P
     const statusEnum = getCaseStatusEnum(newStatus);
     console.log('Batch updating case statuses:', { caseIds, statusEnum, address });
 
-    // Estimate gas with proper error handling
-    let gasEstimate;
-    try {
-      gasEstimate = await contract.methods.batchUpdateStatus(caseIds, statusEnum)
-        .estimateGas({ from: address });
-    } catch (error: any) {
-      console.error('Gas estimation failed:', error);
-      throw new Error(`Gas estimation failed: ${error.message}`);
-    }
+    // Estimate gas
+    const gasEstimate = await contract.methods.batchUpdateStatus(caseIds, statusEnum)
+      .estimateGas({ from: address });
 
     // Add 20% buffer to gas limit
     const gasLimit = Math.floor(Number(gasEstimate) * 1.2).toString();
 
     // Send transaction
-    const tx = await contract.methods.batchUpdateStatus(caseIds, statusEnum).send({
-      from: address,
-      gas: gasLimit
-    });
+    const tx = await contract.methods.batchUpdateStatus(caseIds, statusEnum)
+      .send({
+        from: address,
+        gas: gasLimit
+      });
 
     console.log('Batch status update transaction complete:', tx);
   } catch (error: any) {
@@ -273,7 +273,8 @@ export async function batchUpdateStatus(caseIds: number[], newStatus: string): P
   }
 }
 
-interface CaseCore {
+// Case details interface
+export interface CaseCore {
   childName: string;
   age: number;
   location: string;
@@ -283,16 +284,25 @@ interface CaseCore {
   timestamp: string;
 }
 
-export async function getCaseDetails(caseId: number) {
+// Get case details
+export async function getCaseDetails(caseId: number): Promise<{
+  childName: string;
+  age: number;
+  location: string;
+  status: string;
+  caseType: string;
+  reporter: string;
+  timestamp: number;
+}> {
   try {
     const contract = getContract();
     const web3Instance = getWeb3();
     const caseCore = await contract.methods.getCaseCore(caseId).call() as CaseCore;
 
     return {
-      childName: web3Instance.utils.hexToUtf8(caseCore.childName),
+      childName: web3Instance.utils.hexToUtf8(caseCore.childName).replace(/\0/g, ''),
       age: Number(caseCore.age),
-      location: web3Instance.utils.hexToUtf8(caseCore.location),
+      location: web3Instance.utils.hexToUtf8(caseCore.location).replace(/\0/g, ''),
       status: getCaseStatusString(Number(caseCore.status)),
       caseType: getCaseTypeString(Number(caseCore.caseType)),
       reporter: caseCore.reporter,
