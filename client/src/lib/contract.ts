@@ -9,43 +9,35 @@ export const CONTRACT_ABI: AbiItem[] = [
     "type": "constructor"
   },
   {
-    "inputs": [],
-    "name": "AccessControlBadConfirmation",
-    "type": "error"
-  },
-  {
+    "anonymous": false,
     "inputs": [
       {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "caseId",
+        "type": "uint256"
       },
       {
+        "indexed": false,
         "internalType": "bytes32",
-        "name": "neededRole",
+        "name": "childName",
         "type": "bytes32"
-      }
-    ],
-    "name": "AccessControlUnauthorizedAccount",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "caseIds",
-        "type": "uint256[]"
       },
       {
-        "internalType": "enum CaseRegistry.Status",
-        "name": "newStatus",
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "age",
         "type": "uint8"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "reporter",
+        "type": "address"
       }
     ],
-    "name": "batchUpdateStatus",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    "name": "CaseSubmitted",
+    "type": "event"
   },
   {
     "anonymous": false,
@@ -67,16 +59,82 @@ export const CONTRACT_ABI: AbiItem[] = [
         "internalType": "address",
         "name": "updatedBy",
         "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint40",
-        "name": "timestamp",
-        "type": "uint40"
       }
     ],
     "name": "CaseStatusUpdated",
     "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "childName",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "age",
+        "type": "uint8"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "location",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "string",
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "contactInfo",
+        "type": "string"
+      },
+      {
+        "internalType": "enum CaseRegistry.CaseType",
+        "name": "caseType",
+        "type": "uint8"
+      },
+      {
+        "internalType": "string",
+        "name": "imageUrl",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "physicalTraits",
+        "type": "string"
+      }
+    ],
+    "name": "submitCase",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "caseIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "enum CaseRegistry.Status",
+        "name": "newStatus",
+        "type": "uint8"
+      }
+    ],
+    "name": "batchUpdateStatus",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     "inputs": [
@@ -97,42 +155,11 @@ export const CONTRACT_ABI: AbiItem[] = [
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "grantRole",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "pause",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "Paused",
-    "type": "event"
   },
   {
     "inputs": [],
@@ -149,6 +176,62 @@ export const CONTRACT_ABI: AbiItem[] = [
         "internalType": "bool",
         "name": "",
         "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "caseId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getCaseCore",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "bytes32",
+            "name": "childName",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "uint8",
+            "name": "age",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "location",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "enum CaseRegistry.Status",
+            "name": "status",
+            "type": "uint8"
+          },
+          {
+            "internalType": "enum CaseRegistry.CaseType",
+            "name": "caseType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "address",
+            "name": "reporter",
+            "type": "address"
+          },
+          {
+            "internalType": "uint40",
+            "name": "timestamp",
+            "type": "uint40"
+          }
+        ],
+        "internalType": "struct CaseRegistry.CaseCore",
+        "name": "",
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",

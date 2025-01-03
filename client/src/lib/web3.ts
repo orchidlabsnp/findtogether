@@ -124,73 +124,66 @@ export async function submitCaseToBlockchain(caseInput: {
       throw new Error("Required fields missing");
     }
 
-    // Convert strings to bytes32
-    const blockchainInput = {
-      childName: web3Instance.utils.padRight(web3Instance.utils.asciiToHex(caseInput.childName), 64),
-      age: caseInput.age,
-      location: web3Instance.utils.padRight(web3Instance.utils.asciiToHex(caseInput.location), 64),
-      description: caseInput.description || '',
-      contactInfo: caseInput.contactInfo || '',
-      caseType: getCaseTypeEnum(caseInput.caseType),
-      imageUrl: caseInput.imageUrl || '',
-      physicalTraits: caseInput.physicalTraits || ''
-    };
+    // Convert strings to bytes32 and ensure proper formatting
+    const childNameBytes = web3Instance.utils.padRight(
+      web3Instance.utils.asciiToHex(caseInput.childName.slice(0, 32)),
+      64
+    );
+    const locationBytes = web3Instance.utils.padRight(
+      web3Instance.utils.asciiToHex(caseInput.location.slice(0, 32)),
+      64
+    );
 
-    console.log('Submitting case to blockchain with input:', {
-      age: blockchainInput.age,
-      caseType: blockchainInput.caseType,
-      // Sensitive data redacted from logs
-      location: '[REDACTED]',
-      description: '[REDACTED]'
+    console.log('Preparing blockchain submission...', {
+      childNameBytes,
+      locationBytes,
+      age: caseInput.age,
+      caseType: getCaseTypeEnum(caseInput.caseType)
     });
+
+    // Prepare transaction parameters
+    const params = [
+      childNameBytes,
+      caseInput.age,
+      locationBytes,
+      caseInput.description || '',
+      caseInput.contactInfo || '',
+      getCaseTypeEnum(caseInput.caseType),
+      caseInput.imageUrl || '',
+      caseInput.physicalTraits || ''
+    ];
 
     // Estimate gas with proper error handling
     let gasEstimate;
     try {
-      gasEstimate = await contract.methods.submitCase(
-        blockchainInput.childName,
-        blockchainInput.age,
-        blockchainInput.location,
-        blockchainInput.description,
-        blockchainInput.contactInfo,
-        blockchainInput.caseType,
-        blockchainInput.imageUrl,
-        blockchainInput.physicalTraits
-      ).estimateGas({ from: account });
+      gasEstimate = await contract.methods.submitCase(...params)
+        .estimateGas({ from: account });
       console.log('Gas estimate:', gasEstimate);
     } catch (error: any) {
       console.error('Gas estimation failed:', error);
       if (error.message.includes("execution reverted")) {
         throw new Error("Transaction would fail: " + error.message);
       }
-      throw new Error("Gas estimation failed: " + error.message);
+      throw new Error("Failed to estimate gas: " + error.message);
     }
 
     // Add 20% buffer to gas limit
     const gasLimit = Math.floor(Number(gasEstimate) * 1.2).toString();
-    console.log('Using gas limit:', gasLimit);
 
     // Submit transaction
-    const result = await contract.methods.submitCase(
-      blockchainInput.childName,
-      blockchainInput.age,
-      blockchainInput.location,
-      blockchainInput.description,
-      blockchainInput.contactInfo,
-      blockchainInput.caseType,
-      blockchainInput.imageUrl,
-      blockchainInput.physicalTraits
-    ).send({ 
-      from: account,
-      gas: gasLimit
-    });
+    const result = await contract.methods.submitCase(...params)
+      .send({
+        from: account,
+        gas: gasLimit
+      });
 
-    // Verify event emission
-    if (!result.events?.CaseSubmitted?.returnValues?.caseId) {
+    // Verify event emission and extract case ID
+    const event = result.events?.CaseSubmitted;
+    if (!event || !event.returnValues?.caseId) {
       throw new Error("Failed to get case ID from blockchain event");
     }
 
-    const blockchainCaseId = Number(result.events.CaseSubmitted.returnValues.caseId);
+    const blockchainCaseId = Number(event.returnValues.caseId);
     console.log('Successfully received blockchain case ID:', blockchainCaseId);
 
     return blockchainCaseId;
@@ -198,7 +191,7 @@ export async function submitCaseToBlockchain(caseInput: {
     console.error('Error submitting case to blockchain:', error);
     // Provide more specific error messages
     if (error.message.includes("User denied")) {
-      throw new Error("Transaction was rejected by user");
+      throw new Error("Transaction was rejected in MetaMask");
     } else if (error.message.includes("insufficient funds")) {
       throw new Error("Insufficient funds for gas");
     } else if (error.message.includes("nonce too low")) {
