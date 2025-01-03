@@ -385,7 +385,7 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden mt-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

@@ -8,6 +8,7 @@ import path from "path";
 import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { generateCaseNarrative } from "./lib/openai";
+import { sendUrgentCaseAlert } from './services/email';
 
 // Add detailed logging for troubleshooting
 const logError = (context: string, error: any) => {
@@ -162,6 +163,25 @@ export function registerRoutes(app: Express): Server {
         createdAt: new Date(),
         updatedAt: new Date()
       }).returning();
+
+      // Send urgent email alerts for specific case types
+      if (caseType === 'child_labour' || caseType === 'child_harassment') {
+        try {
+          await sendUrgentCaseAlert({
+            childName,
+            age: parseInt(age),
+            location,
+            caseType,
+            description,
+            contactInfo
+          });
+          console.log(`Urgent alert sent for ${caseType} case`);
+        } catch (error) {
+          console.error('Failed to send urgent alert:', error);
+          // Continue with the response even if email fails
+          console.log('Continuing despite email alert failure');
+        }
+      }
 
       console.log("Case created successfully:", newCase);
       res.json({ case: newCase });
@@ -318,7 +338,6 @@ export function registerRoutes(app: Express): Server {
       });
     }
   });
-
 
   app.post("/api/users", async (req, res) => {
     try {
