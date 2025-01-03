@@ -34,6 +34,8 @@ export const cases = pgTable("cases", {
   aiCharacteristics: text("ai_characteristics"),
   matchConfidence: text("match_confidence"),
   ipfsHash: text("ipfs_hash"),
+  blockchainCaseId: integer("blockchain_case_id"),
+  blockchainTxHash: text("blockchain_tx_hash"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
@@ -61,6 +63,8 @@ export const insertCaseSchema = createInsertSchema(cases).extend({
   eyes: z.string().optional(),
   height: z.number().min(0).max(300).optional(), // max height in cm
   weight: z.number().min(0).max(200).optional(), // max weight in kg
+  blockchainCaseId: z.number().optional(),
+  blockchainTxHash: z.string().optional(),
 });
 export const selectCaseSchema = createSelectSchema(cases).extend({
   status: CaseStatus,

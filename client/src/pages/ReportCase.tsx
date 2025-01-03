@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useRef, useState, useEffect } from 'react';
-import { submitCaseToBlockchain } from "@/lib/web3";
+import { submitCaseToBlockchain, type CaseSubmission } from "@/lib/blockchain";
 import {
   Select,
   SelectContent,
@@ -144,7 +144,7 @@ export default function ReportCase() {
       }
 
       // Prepare blockchain input
-      const blockchainCaseData = {
+      const blockchainCaseData: CaseSubmission = {
         childName: caseData.childName,
         age: caseData.age,
         location: caseData.location,
@@ -159,13 +159,6 @@ export default function ReportCase() {
           weight: caseData.weight
         })
       };
-
-      console.log('Submitting case to blockchain with data:', { 
-        caseId: caseData.id,
-        childName: '[REDACTED]',
-        age: blockchainCaseData.age,
-        location: blockchainCaseData.location
-      });
 
       const blockchainCaseId = await submitCaseToBlockchain(blockchainCaseData);
       console.log('Successfully received blockchain case ID:', blockchainCaseId);
@@ -191,26 +184,11 @@ export default function ReportCase() {
       setLocation("/find");
     } catch (error: any) {
       console.error('Blockchain submission error:', error);
-
-      // Extract meaningful error message
-      let errorMessage = "Failed to store case on blockchain. ";
-      if (error.message.includes("User denied")) {
-        errorMessage += "Transaction was rejected. Please try again.";
-      } else if (error.message.includes("insufficient funds")) {
-        errorMessage += "Insufficient funds for gas fees.";
-      } else if (error.message.includes("nonce too low")) {
-        errorMessage += "Please reset your MetaMask account.";
-      } else {
-        errorMessage += error.message;
-      }
-
       toast({
         title: "Blockchain Submission Failed",
-        description: errorMessage,
+        description: error.message,
         variant: "destructive"
       });
-
-      // Allow user to retry from case details
       setLocation("/find");
     } finally {
       setBlockchainSubmitting(false);

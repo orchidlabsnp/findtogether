@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Case } from "@db/schema";
+import { getContract, getCaseStatusEnum } from "@/lib/blockchain";
 import {
   Card,
   CardContent,
@@ -19,19 +20,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Loader2, 
-  MapPin, 
-  Tag, 
-  Clock, 
-  Calendar, 
-  PlayCircle, 
+import {
+  Loader2,
+  MapPin,
+  Tag,
+  Clock,
+  Calendar,
+  PlayCircle,
   PauseCircle,
   Shield,
-  AlertTriangle 
+  AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
-import { getContract, getAddress, getCaseStatusEnum } from "@/lib/web3";
 
 // Admin constants
 const ADMIN_ADDRESS = "0x5A498a4520b56Fe0119Bd3D8D032D53c65c035a7";
@@ -108,7 +108,7 @@ export default function Admin() {
         const address = accounts[0];
         setCurrentAddress(address);
 
-        const isAdmin = address.toLowerCase() === ADMIN_ADDRESS.toLowerCase() || 
+        const isAdmin = address.toLowerCase() === ADMIN_ADDRESS.toLowerCase() ||
                        await checkAdminRole(address);
 
         if (!isAdmin) {
