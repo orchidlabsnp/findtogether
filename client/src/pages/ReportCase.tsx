@@ -136,7 +136,15 @@ export default function ReportCase() {
   const submitToBlockchain = async (caseData: any) => {
     try {
       setBlockchainSubmitting(true);
-      const blockchainCaseId = await submitCaseToBlockchain({
+      console.log('Starting blockchain submission for case:', caseData.id);
+
+      // Validate case data before submission
+      if (!caseData) {
+        throw new Error("No case data available for blockchain submission");
+      }
+
+      // Prepare blockchain input
+      const blockchainCaseData = {
         childName: caseData.childName,
         age: caseData.age,
         location: caseData.location,
@@ -150,14 +158,20 @@ export default function ReportCase() {
           height: caseData.height,
           weight: caseData.weight
         })
+      };
+
+      console.log('Submitting case to blockchain with data:', { 
+        caseId: caseData.id,
+        childName: '[REDACTED]',
+        age: blockchainCaseData.age,
+        location: blockchainCaseData.location
       });
 
-      toast({
-        title: "Success",
-        description: "Case has been permanently recorded on the blockchain.",
-      });
+      const blockchainCaseId = await submitCaseToBlockchain(blockchainCaseData);
+      console.log('Successfully received blockchain case ID:', blockchainCaseId);
 
-      await fetch(`/api/cases/${caseData.id}/blockchain`, {
+      // Update database with blockchain case ID
+      const response = await fetch(`/api/cases/${caseData.id}/blockchain`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -165,14 +179,38 @@ export default function ReportCase() {
         body: JSON.stringify({ blockchainCaseId }),
       });
 
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      toast({
+        title: "Success",
+        description: "Case has been permanently recorded on the blockchain.",
+      });
+
       setLocation("/find");
     } catch (error: any) {
       console.error('Blockchain submission error:', error);
+
+      // Extract meaningful error message
+      let errorMessage = "Failed to store case on blockchain. ";
+      if (error.message.includes("User denied")) {
+        errorMessage += "Transaction was rejected. Please try again.";
+      } else if (error.message.includes("insufficient funds")) {
+        errorMessage += "Insufficient funds for gas fees.";
+      } else if (error.message.includes("nonce too low")) {
+        errorMessage += "Please reset your MetaMask account.";
+      } else {
+        errorMessage += error.message;
+      }
+
       toast({
-        title: "Warning",
-        description: "Failed to store case on blockchain. You can try again later from the case details page.",
+        title: "Blockchain Submission Failed",
+        description: errorMessage,
         variant: "destructive"
       });
+
+      // Allow user to retry from case details
       setLocation("/find");
     } finally {
       setBlockchainSubmitting(false);
