@@ -8,7 +8,7 @@ import path from "path";
 import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { generateCaseNarrative } from "./lib/openai";
-import { sendUrgentCaseAlert } from './services/email';
+import { initializeNotificationService, getNotificationService } from './services/notifications';
 
 // Add detailed logging for troubleshooting
 const logError = (context: string, error: any) => {
@@ -41,6 +41,12 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
+
+  // Create HTTP server
+  const httpServer = createServer(app);
+
+  // Initialize notification service
+  initializeNotificationService(httpServer);
 
   // Get all cases endpoint with improved error handling
   app.get("/api/cases", async (req, res) => {
@@ -164,10 +170,11 @@ export function registerRoutes(app: Express): Server {
         updatedAt: new Date()
       }).returning();
 
-      // Send urgent email alerts for specific case types
+      // Send notifications for urgent case types
       if (caseType === 'child_labour' || caseType === 'child_harassment') {
         try {
-          await sendUrgentCaseAlert({
+          const notificationService = getNotificationService();
+          await notificationService.sendUrgentCaseAlert({
             childName,
             age: parseInt(age),
             location,
@@ -175,11 +182,11 @@ export function registerRoutes(app: Express): Server {
             description,
             contactInfo
           });
-          console.log(`Urgent alert sent for ${caseType} case`);
+          console.log(`Urgent notifications sent for ${caseType} case`);
         } catch (error) {
-          console.error('Failed to send urgent alert:', error);
-          // Continue with the response even if email fails
-          console.log('Continuing despite email alert failure');
+          console.error('Failed to send urgent notifications:', error);
+          // Continue with the response even if notifications fail
+          console.log('Continuing despite notification failure');
         }
       }
 
@@ -488,6 +495,5 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  const httpServer = createServer(app);
   return httpServer;
 }
