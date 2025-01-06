@@ -66,13 +66,21 @@ export const sendCaseNotification = async (data: EmailData) => {
 
       for (const email of EMERGENCY_EMAILS) {
         try {
-          const response = await resend.emails.send({
-            from: 'Child Protection Platform <alert@childprotection.org>',
+          const emailData = {
+            from: 'noreply@resend.dev', // Using Resend's default domain
             to: email,
             subject: getEmailSubject(data.caseType, data.childName),
             text: getEmailTemplate(data),
             tags: [{ name: 'caseType', value: data.caseType }]
+          };
+
+          console.log('Attempting to send email with data:', {
+            to: emailData.to,
+            subject: emailData.subject,
+            from: emailData.from
           });
+
+          const response = await resend.emails.send(emailData);
 
           console.log(`Email sent successfully to ${email}:`, {
             id: response.id,
