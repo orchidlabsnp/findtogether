@@ -54,8 +54,7 @@ export const sendCaseNotification = async (data: EmailData) => {
 
   try {
     if (!process.env.RESEND_API_KEY) {
-      console.error('Email notifications disabled: RESEND_API_KEY not set');
-      return;
+      throw new Error('RESEND_API_KEY environment variable is not set');
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -65,34 +64,30 @@ export const sendCaseNotification = async (data: EmailData) => {
     if (data.caseType === 'child_labour' || data.caseType === 'child_harassment') {
       console.log('Urgent case detected, sending notifications to emergency contacts:', EMERGENCY_EMAILS);
 
-      const emailPromises = EMERGENCY_EMAILS.map(async (email) => {
+      for (const email of EMERGENCY_EMAILS) {
         try {
           const response = await resend.emails.send({
-            from: 'Child Protection Platform <notifications@childprotection.org>',
+            from: 'Child Protection Platform <alert@childprotection.org>',
             to: email,
             subject: getEmailSubject(data.caseType, data.childName),
             text: getEmailTemplate(data),
+            tags: [{ name: 'caseType', value: data.caseType }]
           });
 
-          console.log(`Email sent successfully to ${email}:`, response);
-          return response;
+          console.log(`Email sent successfully to ${email}:`, {
+            id: response.id,
+            to: email,
+            subject: getEmailSubject(data.caseType, data.childName)
+          });
         } catch (emailError: any) {
           console.error(`Failed to send email to ${email}:`, {
             error: emailError.message,
             code: emailError.statusCode,
             details: emailError.details
           });
-          throw emailError; // Re-throw to be caught by the Promise.all
         }
-      });
-
-      try {
-        await Promise.all(emailPromises);
-        console.log(`Email notifications sent successfully for case ${data.caseId}`);
-      } catch (batchError) {
-        console.error(`Some email notifications failed for case ${data.caseId}:`, batchError);
-        // Don't throw here to prevent blocking case submission
       }
+      console.log(`Email notification process completed for case ${data.caseId}`);
     } else {
       console.log('Non-urgent case, skipping emergency notifications');
     }
@@ -102,6 +97,6 @@ export const sendCaseNotification = async (data: EmailData) => {
       error: error.message,
       stack: error.stack
     });
-    // Log error but don't throw to prevent blocking case submission
+    throw error; // Re-throw to be handled by the route handler
   }
 };
