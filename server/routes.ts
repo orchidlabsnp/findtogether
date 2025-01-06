@@ -9,6 +9,7 @@ import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { generateCaseNarrative } from "./lib/openai";
 import { sendCaseNotification } from "./services/email";
+import { differenceInYears } from "date-fns";
 
 // Add detailed logging for troubleshooting
 const logError = (context: string, error: any) => {
@@ -70,7 +71,7 @@ export function registerRoutes(app: Express): Server {
 
       const { 
         childName, 
-        age, 
+        age: providedAge, 
         dateOfBirth,
         hair,
         eyes,
@@ -83,10 +84,28 @@ export function registerRoutes(app: Express): Server {
         caseType = 'child_missing'
       } = req.body;
 
+      // Calculate age from date of birth if provided
+      let calculatedAge = null;
+      if (dateOfBirth) {
+        const dob = new Date(dateOfBirth);
+        calculatedAge = differenceInYears(new Date(), dob);
+        console.log(`Calculated age from date of birth: ${calculatedAge} years`);
+      }
+
+      // Use calculated age if available, otherwise use provided age
+      const age = calculatedAge !== null ? calculatedAge : parseInt(providedAge);
+
+      // Validate age
+      if (isNaN(age) || age < 0 || age > 18) {
+        return res.status(400).json({
+          error: "Invalid age",
+          details: "Age must be between 0 and 18 years"
+        });
+      }
+
       // Validate required fields
       const requiredFields = {
         childName,
-        age,
         description,
         contactInfo,
         reporterAddress,
@@ -105,7 +124,6 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Handle user creation/lookup
       const normalizedAddress = reporterAddress.toLowerCase();
       console.log("Looking up user with address:", normalizedAddress);
 
@@ -121,7 +139,6 @@ export function registerRoutes(app: Express): Server {
         user = newUser;
       }
 
-      // Handle image processing
       const files = req.files as Express.Multer.File[];
       const imageFile = files?.find(file => file.mimetype.startsWith('image/'));
       let imageUrl;
@@ -142,11 +159,10 @@ export function registerRoutes(app: Express): Server {
         }
       }
 
-      // Create the case with validated data
       console.log("Creating new case...");
       const [newCase] = await db.insert(cases).values({
         childName,
-        age: parseInt(age),
+        age,
         dateOfBirth: dateOfBirth || null,
         hair: hair || null,
         eyes: eyes || null,
@@ -164,7 +180,6 @@ export function registerRoutes(app: Express): Server {
         updatedAt: new Date()
       }).returning();
 
-      // After successful case creation, send email notification
       if (newCase.caseType === 'child_labour' || newCase.caseType === 'child_harassment') {
         try {
           await sendCaseNotification({
@@ -178,7 +193,6 @@ export function registerRoutes(app: Express): Server {
           console.log(`Email notifications sent to emergency contacts for case ${newCase.id}`);
         } catch (emailError) {
           console.error('Failed to send email notifications:', emailError);
-          // Continue with the response even if email fails
         }
       }
 
