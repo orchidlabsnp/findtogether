@@ -50,29 +50,58 @@ This is an automated message from the Child Protection Platform.
 };
 
 export const sendCaseNotification = async (data: EmailData) => {
+  console.log('Starting email notification process for case:', data.caseId);
+
   try {
     if (!process.env.RESEND_API_KEY) {
-      console.warn('Email notifications disabled: RESEND_API_KEY not set');
+      console.error('Email notifications disabled: RESEND_API_KEY not set');
       return;
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
+    console.log('Initialized Resend client');
 
     // Send notification for urgent cases to both emergency emails
     if (data.caseType === 'child_labour' || data.caseType === 'child_harassment') {
-      await Promise.all(EMERGENCY_EMAILS.map(email =>
-        resend.emails.send({
-          from: 'Child Protection Platform <notifications@childprotection.org>',
-          to: email,
-          subject: getEmailSubject(data.caseType, data.childName),
-          text: getEmailTemplate(data),
-        })
-      ));
+      console.log('Urgent case detected, sending notifications to emergency contacts:', EMERGENCY_EMAILS);
 
-      console.log(`Email notifications sent to emergency contacts for case ${data.caseId}`);
+      const emailPromises = EMERGENCY_EMAILS.map(async (email) => {
+        try {
+          const response = await resend.emails.send({
+            from: 'Child Protection Platform <notifications@childprotection.org>',
+            to: email,
+            subject: getEmailSubject(data.caseType, data.childName),
+            text: getEmailTemplate(data),
+          });
+
+          console.log(`Email sent successfully to ${email}:`, response);
+          return response;
+        } catch (emailError: any) {
+          console.error(`Failed to send email to ${email}:`, {
+            error: emailError.message,
+            code: emailError.statusCode,
+            details: emailError.details
+          });
+          throw emailError; // Re-throw to be caught by the Promise.all
+        }
+      });
+
+      try {
+        await Promise.all(emailPromises);
+        console.log(`Email notifications sent successfully for case ${data.caseId}`);
+      } catch (batchError) {
+        console.error(`Some email notifications failed for case ${data.caseId}:`, batchError);
+        // Don't throw here to prevent blocking case submission
+      }
+    } else {
+      console.log('Non-urgent case, skipping emergency notifications');
     }
-  } catch (error) {
-    console.error('Error sending email notification:', error);
+  } catch (error: any) {
+    console.error('Error in email notification process:', {
+      caseId: data.caseId,
+      error: error.message,
+      stack: error.stack
+    });
     // Log error but don't throw to prevent blocking case submission
   }
 };
