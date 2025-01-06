@@ -2,12 +2,13 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { cases, users } from "@db/schema";
-import { eq, ilike } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { compareImageWithDescription, getImageDescription } from "./services/openai";
 import { generateCaseNarrative } from "./lib/openai";
+import { sendCaseNotification } from "./services/email";
 
 // Add detailed logging for troubleshooting
 const logError = (context: string, error: any) => {
@@ -162,6 +163,18 @@ export function registerRoutes(app: Express): Server {
         createdAt: new Date(),
         updatedAt: new Date()
       }).returning();
+
+      // After successful case creation, send email notification
+      if (newCase.caseType === 'child_labour' || newCase.caseType === 'child_harassment') {
+        await sendCaseNotification({
+          caseId: newCase.id,
+          childName: newCase.childName,
+          caseType: newCase.caseType,
+          location: newCase.location,
+          description: newCase.description,
+          contactInfo: newCase.contactInfo
+        });
+      }
 
       console.log("Case created successfully:", newCase);
       res.json({ case: newCase });
