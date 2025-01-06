@@ -166,14 +166,20 @@ export function registerRoutes(app: Express): Server {
 
       // After successful case creation, send email notification
       if (newCase.caseType === 'child_labour' || newCase.caseType === 'child_harassment') {
-        await sendCaseNotification({
-          caseId: newCase.id,
-          childName: newCase.childName,
-          caseType: newCase.caseType,
-          location: newCase.location,
-          description: newCase.description,
-          contactInfo: newCase.contactInfo
-        });
+        try {
+          await sendCaseNotification({
+            caseId: newCase.id,
+            childName: newCase.childName,
+            caseType: newCase.caseType,
+            location: newCase.location,
+            description: newCase.description,
+            contactInfo: newCase.contactInfo
+          });
+          console.log(`Email notifications sent to emergency contacts for case ${newCase.id}`);
+        } catch (emailError) {
+          console.error('Failed to send email notifications:', emailError);
+          // Continue with the response even if email fails
+        }
       }
 
       console.log("Case created successfully:", newCase);
